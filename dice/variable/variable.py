@@ -19,7 +19,7 @@ class Variable():
 		(5, 3)
 		>>> V[:] = 42.0
 		>>> V[2,1]
-		42.0
+		[[ 42.]]
 		>>> V.units = 'kg/m2/s'
 		"""
 
@@ -28,21 +28,16 @@ class Variable():
 
 		# dimensions argument should be a tuple of either Dimension instances, or 2-tuples
 		# in the form (name, size)
-		if type(dimensions) == tuple:
+		for d in dimensions:			
 
-			for d in dimensions:			
+			if type(d) == tuple:
+				self._dimensions.append(Dimension(*d))
 
-				if type(d) == tuple:
-					self._dimensions.append(Dimension(*d))
+			elif type(d) == Dimension:
+				self._dimensions.append(d)
 
-				elif type(d) == Dimension:
-					self._dimensions.append(d)
-
-				else:
-					raise TypeError('{} is not a 2-tuple (name, size) or a Dimension instance'.format(d))
-
-		else:
-			raise TypeError('dimensions argument must be a tuple ' + repr(dimensions))
+			else:
+				raise TypeError('{} is not a 2-tuple (name, size) or a Dimension instance'.format(d))
 
 		if data:
 			self._data = data
@@ -77,9 +72,9 @@ class Variable():
 	def attributes(self):
 		return self._attributes
 
-
 	def __setitem__(self, slices, values):
 		self._data[slices] = values
 
 	def __getitem__(self, slices):
-		return self._data[slices]
+		return self._data[slices].copy()
+

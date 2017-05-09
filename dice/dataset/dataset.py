@@ -21,14 +21,14 @@ class Dataset():
 	
 	def __init__(self, dimensions=(), attributes={}, variables={}):
 		"""
-		>>> ds = Dataset(variables={'test1':Variable((('x', 5),('y',3)), float)})
+		>>> ds = Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, {'name':'test'})})
 		>>> print(ds._dimensions)
 		[<Dimension: x (5) >, <Dimension: y (3) >]
 		>>> print(ds.variables)
 		{'test1': <Variable: [<Dimension: x (5) >, <Dimension: y (3) >]>}
 		>>> ds.variables['test1'][:] = 42.0
 		>>> print(ds.variables['test1'][0,0])
-		42.0
+		[[ 42.]]
 		"""
 
 		self._dimensions = []
