@@ -1,9 +1,7 @@
 import netCDF4
 
-from array.array import Array, Dimension
-from variable.variable import Variable
-from field.field import Field
-from field.field import CFField
+from .. array.array import Array, Dimension
+from .. variable.variable import Variable
 
 from dataset import Dataset
 from dataset import DatasetError

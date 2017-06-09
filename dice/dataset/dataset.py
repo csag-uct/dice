@@ -1,6 +1,9 @@
 from abc import ABCMeta, abstractmethod
+import re
 
-from variable.variable import Variable
+from .. variable.variable import Variable
+
+import netCDF4
 
 
 class DatasetError(Exception):
@@ -95,3 +98,15 @@ class Dataset():
 		
 	def __repr__(self):
 		return "<{}: {} | {}>".format(self.__class__.__name__, repr(self.dimensions), repr(self.variables))
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
-from array.array import Dimension, Array
-from array.nparray import numpyArray
+from .. array.array import Dimension, Array
+from .. array.nparray import numpyArray
 
 
 class Variable():
