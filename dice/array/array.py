@@ -195,6 +195,9 @@ class Dimension(object):
 	def __repr__(self):
 		return "<Dimension: {} ({}) >".format(self.name, self.size)
 
+	def asjson(self):
+		return {'name':self.name, 'size':self.size}
+
 
 
 class Array():

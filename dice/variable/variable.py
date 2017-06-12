@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
-from .. array.array import Dimension, Array
-from .. array.nparray import numpyArray
+from array import Dimension
+from array import Array
+from array import numpyArray
 
 
 class Variable():
@@ -9,7 +10,7 @@ class Variable():
 	A variable encapsulates an array with named dimensions and attributes
 	"""
 
-	def __init__(self, dimensions, dtype, attributes={}, data=None, storage=numpyArray):
+	def __init__(self, dimensions, dtype, attributes={}, dataset=None, data=None, storage=numpyArray):
 		"""
 		Create a new variable instance.  The dimensions parameter must be a tuple consisting of either
 		instances of Dimension or 2-tuples of the form (name, size) or (name, size, fixed)
@@ -25,6 +26,7 @@ class Variable():
 
 		self._dimensions = []
 		self._dtype = dtype
+		self._dataset = dataset
 
 		# dimensions argument should be a tuple of either Dimension instances, or 2-tuples
 		# in the form (name, size)
@@ -54,6 +56,9 @@ class Variable():
 	def __repr__(self):
 		return "<{}: {}>".format(self.__class__.__name__, repr(self._dimensions))
 
+
+	def asjson(self, data=False):
+		return {'dimensions':[], 'dtype':repr(self.dtype), 'attributes':self.attributes.copy()}
 
 
 	@property

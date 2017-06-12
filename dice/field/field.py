@@ -1,7 +1,7 @@
 import re
 
-from dice.variable.variable import Variable
-from dice.dataset.dataset import Dataset
+from variable import Variable
+from dataset import Dataset
 
 import numpy as np
 import netCDF4
@@ -236,6 +236,7 @@ class Field(object):
 			done.extend(args.keys())
 
 		return result
+
 
 
 class CFField(Field):
