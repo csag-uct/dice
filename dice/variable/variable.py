@@ -1,8 +1,10 @@
 from abc import ABCMeta, abstractmethod
 
-from array import Dimension
-from array import Array
-from array import numpyArray
+from copy import copy
+
+from dice.array import Dimension
+from dice.array import Array
+from dice.array import numpyArray
 
 
 class Variable():
@@ -10,12 +12,14 @@ class Variable():
 	A variable encapsulates an array with named dimensions and attributes
 	"""
 
-	def __init__(self, dimensions, dtype, attributes={}, dataset=None, data=None, storage=numpyArray):
+	def __init__(self, dimensions, dtype, name=None, attributes={}, dataset=None, data=None, storage=numpyArray):
 		"""
 		Create a new variable instance.  The dimensions parameter must be a tuple consisting of either
 		instances of Dimension or 2-tuples of the form (name, size) or (name, size, fixed)
 
-		>>> V = Variable((('x', 5),('y',3)), float)
+		>>> V = Variable((('x', 5),('y',3)), float, 'V')
+		>>> print(V)
+		<Variable: V [<Dimension: x (5) >, <Dimension: y (3) >]>
 		>>> V.shape
 		(5, 3)
 		>>> V[:] = 42.0
@@ -26,7 +30,8 @@ class Variable():
 
 		self._dimensions = []
 		self._dtype = dtype
-		self._dataset = dataset
+		self.name = name
+		self.dataset = dataset
 
 		# dimensions argument should be a tuple of either Dimension instances, or 2-tuples
 		# in the form (name, size)
@@ -54,7 +59,10 @@ class Variable():
 			return TypeError('attributes must be a dictionary')
 
 	def __repr__(self):
-		return "<{}: {}>".format(self.__class__.__name__, repr(self._dimensions))
+		if self.name:
+			return "<{}: {} {}>".format(self.__class__.__name__, self.name, repr(self._dimensions))
+		else:
+			return "<{}: {}>".format(self.__class__.__name__, repr(self._dimensions))
 
 
 	def asjson(self, data=False):
@@ -81,5 +89,5 @@ class Variable():
 		self._data[slices] = values
 
 	def __getitem__(self, slices):
-		return self._data[slices].copy()
+		return self._data[slices]
 

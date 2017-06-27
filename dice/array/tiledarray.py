@@ -18,7 +18,7 @@ class tiledArray(Array):
 	tiles are managed through a dict
 	"""
 
-	def __init__(self, shape, dtype, tilespec, storage=numpyArray):
+	def __init__(self, shape, dtype, tilespec=None, storage=numpyArray):
 		"""
 		Create an instance of a tiled Array.  Sets up the tile dictionary and tile bounds arrays
 		but doesn't allocate and storage as allocation is lazy
@@ -28,8 +28,12 @@ class tiledArray(Array):
 
 		super(tiledArray, self).__init__(shape, dtype)
 
-		self._tilespec = tilespec
-		self.tiles = self._make_tiles(tilespec)
+		if tilespec:
+			self._tilespec = tilespec
+		else:
+			self._tilespec = shape
+
+		self.tiles = self._make_tiles(self._tilespec)
 		self._storage = storage
 
 	def _make_tiles(self, tilespec):
@@ -63,7 +67,6 @@ class tiledArray(Array):
 		"""
 
 		slices = real_slices(self.shape, slices)
-		#print slices
 
 		starts = np.array([s.start for s in slices])
 		stops = np.array([s.stop for s in slices])
@@ -73,7 +76,7 @@ class tiledArray(Array):
 
 			ranges = tile['ranges']
 
-			if np.all(np.logical_and(ranges[:,1] >= starts, ranges[:,0] < stops)):
+			if np.all(np.logical_and(ranges[:,1] > starts, ranges[:,0] < stops)):
 				result.append(index)
 
 		return result
@@ -107,7 +110,7 @@ class tiledArray(Array):
 		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
 		>>> a[0:16,0:20] = 42.0
 		>>> a[7,17]
-		array([[ 42.]], dtype=float32)
+		tiledArray([[ 42.]])
 		"""
 #		print self.tiles, self._view, slices, values
 		
@@ -142,7 +145,7 @@ class tiledArray(Array):
 		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
 		>>> a[7:14,3:12] = 42.0
 		>>> a[7,2:5]
-		array([[ nan,  42.,  42.]], dtype=float32)
+		tiledArray([[ nan  42.  42.]])
 		"""
 
 		shape, view = reslice(self.shape, self._view, slices)
@@ -164,12 +167,12 @@ class tiledArray(Array):
 		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
 		>>> a[:] = np.arange(320).reshape((16,20))
 		>>> a[7,2:5]
-		array([[ 142.,  143.,  144.]], dtype=float32)
+		tiledArray([[ 142.  143.  144.]])
 		>>> a[7,2:5] = 96
 		>>> a[6:7,0:5]
-		array([[ 120.,  121.,  122.,  123.,  124.]], dtype=float32)
+		tiledArray([[ 120.  121.  122.  123.  124.]])
 		>>> a[6:7,0:5][:,1:3]
-		array([[ 121.,  122.]], dtype=float32)
+		tiledArray([[ 121.  122.]])
 		"""
 
 		if astype != None:
@@ -189,8 +192,6 @@ class tiledArray(Array):
 			else:
 				data = tile['data'][tile_slices].copy()
 
-			#print result.shape, tile, self._view, tile_slices, data_slices, data
-
 			result[data_slices] = data
 
 		return result
@@ -206,7 +207,7 @@ class tiledArray(Array):
 		>>> b.shape
 		(20,)
 		>>> b[3:7]
-		array([ 42.,  42.,  42.,  42.], dtype=float32)
+		tiledArray([ 42.  42.  42.  42.])
 		"""
 
 		outshape = []

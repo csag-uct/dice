@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import re
 
-from variable import Variable
+from dice.variable import Variable
 
 import netCDF4
 
@@ -24,7 +24,7 @@ class Dataset():
 	
 	def __init__(self, dimensions=(), attributes={}, variables={}):
 		"""
-		>>> ds = Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, {'name':'test'})})
+		>>> ds = Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, attributes={'name':'test'})})
 		>>> print(ds._dimensions)
 		[<Dimension: x (5) >, <Dimension: y (3) >]
 		>>> print(ds.variables)

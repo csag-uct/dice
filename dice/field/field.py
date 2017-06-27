@@ -1,10 +1,12 @@
 import re
 
-from variable import Variable
-from dataset import Dataset
+from dice.variable import Variable
+from dice.dataset import Dataset
 
 import numpy as np
 import netCDF4
+
+import json
 
 
 cffield_unitsmap = {
@@ -57,7 +59,7 @@ class FieldError(Exception):
 
 class Field(object):
 
-	def __init__(self, variable, dataset):
+	def __init__(self, variable):
 		"""A field encapsulates a Variable with meta-data about associated coordinate variables either
 		explicitly defined or implicitely defined through conventions such as CF conventions
 
@@ -65,16 +67,15 @@ class Field(object):
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> print(variable)
-		<Variable: [<Dimension: time (372) >, <Dimension: latitude (150) >, <Dimension: longitude (146) >]>
+		<Variable: rainf [<Dimension: time (372) >, <Dimension: latitude (150) >, <Dimension: longitude (146) >]>
 		>>> print(variable.attributes['units'])
 		mm/day
 		>>> print(variable[100,70,80])
 		60.6826
-		>>> f = Field(variable, ds)
+		>>> f = Field(variable)
 		"""
 
 		self.variable = variable
-		self.dataset = dataset
 
 		self.coordinate_variables = {}
 		self.ancil_variables = {}
@@ -139,7 +140,7 @@ class Field(object):
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
-		>>> f = CFField(variable, ds)
+		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print s
 		[slice(None, None, None), 4, 77]
@@ -148,7 +149,7 @@ class Field(object):
 		        127.48999023], dtype=float32)
 		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
-		>>> f = CFField(variable, ds)
+		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print s
 		[slice(None, None, None), 27, 98]
@@ -156,7 +157,7 @@ class Field(object):
 		3.8146973e-06
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
-		>>> f = CFField(variable, ds)
+		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print ds.variables['name'][:][s[1]]
 		KENILWORTH RACE COURSE ARS
@@ -238,10 +239,126 @@ class Field(object):
 		return result
 
 
+	def subset(self, **kwargs):
+		"""
+		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> variable = ds.variables['pr']
+		>>> f = CFField(variable)
+		>>> f.subset(latitude=(-30,-20), longitude=(20,25), elevation=(1000,))
+		"""
+
+		for name, value in kwargs.items():
+			print name
+
+			# First convert single values to tuples
+			if type(value) not in [tuple, list]:
+				value = tuple([value])
+
+			# Check if variable is a coordinate variable
+			if name in self.coordinate_variables:
+				variable = self.coordinate_variables[name]
+
+			# Check if its an ancilary variable
+			elif name in self.ancil_variables:
+				variable = self.ancil_variables[name]
+
+			print variable
+
+
+
+
+
+	def features(self, values=None):
+		"""Return a dict of features (GeoJSON structure) for this field.  For point datasets this will be a set of 
+		Point features, for gridded datasets this will be a set of simple Polygon features either inferred from the
+		grid point locations, or directly from the cell bounds attributes (not implemented yet)
+
+		The data parameter can one of None, 'last', 'all'
+
+		The timestamp parameter can be one of None, 'last', 'range'
+
+		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> variable = ds.variables['pr']
+		>>> f = CFField(variable)
+		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> variable = ds.variables['rainf']
+		>>> f = CFField(variable)
+		"""
+
+		# First we need to determine the type of grid we have.  If latitude and longitude are 1D and both
+		# map to the same variable dimension then we have a discrete points dataset, otherwise a gridded dataset
+
+		result = {"type":"FeatureCollection", "features":[]}
+
+
+		if values == 'last':
+
+			s = [slice(None)]*len(self.variable.shape)
+			timedim = self.coordinate_variables['time'][0][0]
+
+			s[timedim] = slice(-1,None)
+			data = self.variable[s]
+			last_time = self.times[-1].isoformat()
+
+		elif values == 'last_valid':
+			s = [slice(None)]*len(self.variable.shape)
+			data = self.variable[s][:]
+
+
+		if len(self.latitudes.shape) == 1 and len(self.longitudes.shape) == 1 and (self.coordinate_variables['latitude'][0] == self.coordinate_variables['longitude'][0]):
+
+			feature_dim = self.coordinate_variables['latitude'][0][0]
+
+			# Iterate through features by iterating through longitude
+			for feature_id in range(self.longitudes.shape[0]):
+
+				coordinates = [float(self.longitudes[feature_id]), float(self.latitudes[feature_id])]
+
+				if 'vertical' in self.coordinate_variables:
+					coordinates.extend([float(self.vertical[feature_id])])
+
+				feature = {"type":"Feature", "geometry":{"type": "Point", "coordinates":coordinates}}
+
+				# Feature properties come form ancilary variables
+				properties = {}
+				for name, mapping in self.ancil_variables.items():
+					properties[name] = mapping[1][feature_id]
+
+				# Process data based properties
+				if values == 'last':
+					s[feature_dim] = feature_id
+					properties['value'] = (last_time, float(data[s][0]))
+
+				elif values == 'last_valid':
+					s[feature_dim] = feature_id
+					subset = data[s]
+
+					if np.ma.count(subset):
+						last_time = np.ma.masked_array(self.times[:], mask=np.ma.getmaskarray(data[s])).compressed()[-1]
+						properties['value'] = (last_time, float(data[s].compressed()[-1]))
+					else:
+						properties['value'] = (None, None)
+
+
+				feature['properties'] = properties
+				result['features'].append(feature)
+
+
+		else:
+			return {'featureType':'gridded'}
+
+		return result
+
+
+
+
+
 
 class CFField(Field):
 	
-	def __init__(self, variable, dataset):
+	def __init__(self, variable):
 		"""A CF Field uses the CF conventions: http://cfconventions.org/ to deterine the coordinates associated
 		with a variable
 
@@ -249,14 +366,14 @@ class CFField(Field):
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> print(variable)
-		<Variable: [<Dimension: time (372) >, <Dimension: latitude (150) >, <Dimension: longitude (146) >]>
+		<Variable: rainf [<Dimension: time (372) >, <Dimension: latitude (150) >, <Dimension: longitude (146) >]>
 		>>> print(variable[100,70,80])
 		60.6826
 		>>> print(variable.attributes['units'])
 		mm/day
-		>>> f = CFField(variable, ds)
+		>>> f = CFField(variable)
 		>>> print(f.coordinate_variables)
-		{'latitude': ([1], <Variable: [<Dimension: latitude (150) >]>), 'longitude': ([2], <Variable: [<Dimension: longitude (146) >]>), 'time': ([0], <Variable: [<Dimension: time (372) >]>)}
+		{'latitude': ([1], <Variable: latitude [<Dimension: latitude (150) >]>), 'longitude': ([2], <Variable: longitude [<Dimension: longitude (146) >]>), 'time': ([0], <Variable: time [<Dimension: time (372) >]>)}
 		>>> print(f.latitudes[:2,:2])
 		[[-36.25 -36.25]
 		 [-35.75 -35.75]]
@@ -269,7 +386,7 @@ class CFField(Field):
 		 datetime.datetime(1979, 5, 16, 0, 0)]
 		"""
 
-		super(CFField, self).__init__(variable, dataset)
+		super(CFField, self).__init__(variable)
 
 
 		if 'coordinates' in self.variable.attributes:
@@ -278,7 +395,7 @@ class CFField(Field):
 			coordinates = []
 
 
-		for name, var in self.dataset.variables.items():
+		for name, var in self.variable.dataset.variables.items():
 
 			# If we have units, check if they are coordinate units, if not coordinate_name will be None
 			if 'units' in var.attributes:

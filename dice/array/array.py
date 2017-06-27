@@ -51,15 +51,15 @@ def reslice(shape, slices, newslices):
 	a list of modified slices.  Returns a tuple of (shape, slices) where shape is the newly calculated shape
 
 	>>> reslice((10,), (), (slice(3,-2),))
-	(slice(3, 7, None),)
+	((5,), (slice(3, 8, None),))
 	>>> reslice((10,), (slice(3, 7, None),), ([0,2,3],))
-	(array([3, 5, 6]),)
+	((3,), (array([3, 5, 6]),))
 	>>> reslice((10,10), (slice(3, 7, None),), ([0,2,3],))
-	(array([3, 5, 6]), slice(0, 10, None))
+	((3, 10), (array([3, 5, 6]), slice(0, 10, None)))
 	>>> reslice((10,10), (slice(None), slice(3, 7, None)), ([0,2,3],))
-	(array([0, 2, 3]), slice(3, 7, 1))
+	((3, 10), (array([0, 2, 3]), slice(3, 7, 1)))
 	>>> reslice((10,), (), (slice(2,-2),))
-	(slice(2, 7, None),)
+	((6,), (slice(2, 8, None),))
 	"""
 
 	# First get rationalized real slices
@@ -202,7 +202,8 @@ class Dimension(object):
 
 class Array():
 	"""
-	An array defines a multi-dimensional array
+	An array defines a multi-dimensional array.  This is meta class so that unary functions are not
+	implemented.  These functions must be implemented by actual implementations in derived classes
 	"""
 
 	__metaclass__ = ABCMeta
