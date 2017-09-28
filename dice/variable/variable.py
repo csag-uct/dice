@@ -18,13 +18,15 @@ class Variable():
 		instances of Dimension or 2-tuples of the form (name, size) or (name, size, fixed)
 
 		>>> V = Variable((('x', 5),('y',3)), float, 'V')
-		>>> print(V)
-		<Variable: V [<Dimension: x (5) >, <Dimension: y (3) >]>
+		>>> print(V.name)
+		V
+		>>> print(V.dimensions)
+		(<Dimension: x (5) >, <Dimension: y (3) >)
 		>>> V.shape
 		(5, 3)
 		>>> V[:] = 42.0
 		>>> V[2,1]
-		[[ 42.]]
+		<Variable: V [('x', 1), ('y', 1)] [[ 42.]]>
 		>>> V.units = 'kg/m2/s'
 		"""
 
@@ -60,9 +62,9 @@ class Variable():
 
 	def __repr__(self):
 		if self.name:
-			return "<{}: {} {}>".format(self.__class__.__name__, self.name, repr(self._dimensions))
+			return "<{}: {} {} {}>".format(self.__class__.__name__, self.name, [(d.name, d.size) for d in self.dimensions], self._data)
 		else:
-			return "<{}: {}>".format(self.__class__.__name__, repr(self._dimensions))
+			return "<{}: {} {}>".format(self.__class__.__name__, [(d.name, d.size) for d in self.dimensions], self._data)
 
 
 	def asjson(self, data=False):
@@ -89,5 +91,14 @@ class Variable():
 		self._data[slices] = values
 
 	def __getitem__(self, slices):
-		return self._data[slices]
+
+		data = self._data[slices]
+
+		dims = []
+		for d, size in zip(self.dimensions, data.shape):
+			dims.append(Dimension(d.name, size, d.fixed))
+
+		result = self.__class__(dims, data.dtype, name=self.name, attributes=self.attributes, data=data)
+
+		return result
 
