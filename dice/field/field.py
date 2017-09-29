@@ -285,6 +285,7 @@ class Field(object):
 			#print variable, mapping, value
 
 			mask = variable[:] < value[0]
+			print mask, value
 
 			if len(mask) > 1 and len(value) > 1:
 				mask = np.logical_or(mask, (variable[:] > value[1]))
