@@ -7,7 +7,7 @@ from dice.array import Array
 from dice.array import numpyArray
 
 
-class Variable():
+class Variable(object):
 	"""
 	A variable encapsulates an array with named dimensions and attributes
 	"""
@@ -20,13 +20,13 @@ class Variable():
 		>>> V = Variable((('x', 5),('y',3)), float, 'V')
 		>>> print(V.name)
 		V
-		>>> print(V.dimensions)
-		(<Dimension: x (5) >, <Dimension: y (3) >)
+		>>> print(V)
+		<Variable: V [('x', 5), ('y', 3)]>
 		>>> V.shape
 		(5, 3)
 		>>> V[:] = 42.0
 		>>> V[2,1]
-		<Variable: V [('x', 1), ('y', 1)] [[ 42.]]>
+		<Variable: V [('x', 1), ('y', 1)]>
 		>>> V.units = 'kg/m2/s'
 		"""
 
@@ -62,11 +62,17 @@ class Variable():
 
 	def __repr__(self):
 		if self.name:
-			return "<{}: {} {} {}>".format(self.__class__.__name__, self.name, [(d.name, d.size) for d in self.dimensions], self._data)
+			return "<{}: {} {}>".format(self.__class__.__name__, self.name, [(d.name, d.size) for d in self.dimensions])
 		else:
-			return "<{}: {} {}>".format(self.__class__.__name__, [(d.name, d.size) for d in self.dimensions], self._data)
+			return "<{}: {}>".format(self.__class__.__name__, [(d.name, d.size) for d in self.dimensions])
 
 
+	def ndarray(self):
+		"""
+		Return variable data as an numpy instance
+		"""
+		return self._data.ndarray()
+	
 	def asjson(self, data=False):
 		return {'dimensions':[], 'dtype':repr(self.dtype), 'attributes':self.attributes.copy()}
 

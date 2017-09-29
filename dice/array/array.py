@@ -200,7 +200,7 @@ class Dimension(object):
 
 
 
-class Array():
+class Array(object):
 	"""
 	An array defines a multi-dimensional array.  This is meta class so that unary functions are not
 	implemented.  These functions must be implemented by actual implementations in derived classes
@@ -222,10 +222,36 @@ class Array():
 
 
 	def __getitem__(self, slices):
-		return NotImplemented()
+
+		shape, view = reslice(self.shape, self._view, slices)
+
+		result = self.__class__(shape, self.dtype)
+		result._view = view
+		
+		return result
+
 
 	def __setitem__(self, slices, values):
-		return NotImplemented()
+		
+		# Combine slices with the view to get data indices
+		shape, slices = reslice(self.shape, self._view, slices)
+		
+		self._data[slices] = values
+
+
+
+	def ndarray(self):
+		"""
+		Return an ndarray version of the array data.  
+		If array has no data then an empty nparray of the correct dtype is returned
+		"""
+
+		# Lazy allocation
+		if type(self._data) == bool:
+			self._data = np.empty(self.shape, dtype=self.dtype)
+
+		return self._data.__getitem__(self._view)
+
 
 	def ufunc(self, func, other):
 		return NotImplemented()

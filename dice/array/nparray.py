@@ -63,27 +63,18 @@ class numpyArray(Array):
 		return result
 
 
-	def copy(self, astype=None):
-		"""Return a copy of the array, defaulting to a numpy ndarray"""
-
-		# Lazy allocation
-		if type(self._data) == bool:
-			self._data = np.empty(self.shape, dtype=self.dtype)
-
-		return self._data.__getitem__(self._view)
-
-
 	def __repr__(self):
-		return str(self.copy())
+		return str(self.ndarray())
+
 
 	def apply(self, func, axis=None):
 		"""
 		Implements functions on the array by delegating to the underlying numpy functions
 		>>> a = numpyArray((16,20), dtype=np.float32)
 		>>> a[:] = np.arange(320).reshape((16,20))
-		>>> a.func('mean')
+		>>> a.apply('mean')
 		[ 159.5]
-		>>> a[:,:5].func('mean', axis=0)
+		>>> a[:,:5].apply('mean', axis=0)
 		[[ 150.  151.  152.  153.  154.]]
 
 		"""
@@ -129,7 +120,7 @@ class numpyArray(Array):
 
 		# If other is also an Array instance, then we need to get the data out
 		if isinstance(other, Array):
-			other = other.copy()
+			other = other.ndarray()
 
 		if func == 'add':
 			result._data = self._data + other

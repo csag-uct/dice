@@ -27,11 +27,11 @@ class Dataset():
 		>>> ds = Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, attributes={'name':'test'})})
 		>>> print(ds._dimensions)
 		[<Dimension: x (5) >, <Dimension: y (3) >]
-		>>> print(ds.variables)
-		{'test1': <Variable: [<Dimension: x (5) >, <Dimension: y (3) >]>}
+		>>> print(ds.variables.keys())
+		['test1']
 		>>> ds.variables['test1'][:] = 42.0
 		>>> print(ds.variables['test1'][0,0])
-		[[ 42.]]
+		<Variable: [('x', 1), ('y', 1)]>
 		"""
 
 		self._dimensions = []

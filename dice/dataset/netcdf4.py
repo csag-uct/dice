@@ -1,10 +1,11 @@
 import netCDF4
 
 from dice.array import Array, Dimension
+from dice.array import reslice
 from dice.variable import Variable
 
-from dice.dataset import Dataset
-from dice.dataset import DatasetError
+from dataset import Dataset
+from dataset import DatasetError
 
 class netCDF4Array(Array):
 	"""
@@ -14,40 +15,46 @@ class netCDF4Array(Array):
 	def __init__(self, ncvar):
 
 		super(netCDF4Array, self).__init__(ncvar.shape, ncvar.datatype)
-		self._ncvar = ncvar
+		self._data = ncvar
 
-	def __setitem__(self, slices, values):		
-		self._ncvar[slices] = values
+#	def __setitem__(self, slices, values):		
+#		self._ncvar[slices] = values
 
 	def __getitem__(self, slices):
-		return self._ncvar[slices]
+
+		shape, view = reslice(self.shape, self._view, slices)
+
+		result = self.__class__(self._data)
+		result._view = view
+		
+		return result
 
 
-class netCDFVariable(Variable):
+class netCDFVariable(Variable, object):
 	"""
 	A netCDF4 file based variable
 	"""
 
-	def __init__(self, dimensions, dtype, name=None, attributes={}, data=None):
+	def __init__(self, dimensions, dtype, name=None, attributes={}, dataset=None, data=None):
 		"""
 		Just call the parent class constructor but force storage to be netCDF4Array
 		"""
 		
-		super(Variable, self).__init__(dimensions, dtype, name=name, attributes=attributes, data=data, storage=netCDF4Array)
+		super(netCDFVariable, self).__init__(dimensions, dtype, name=name, attributes=attributes, dataset=dataset, data=data, storage=netCDF4Array)
 
-	@property
-	def dimensions(self):
-		return tuple(self._dimensions)
+#	@property
+#	def dimensions(self):
+#		return tuple(self._dimensions)
 
-	@property
-	def attributes(self):
-		return self._attributes
+#	@property
+#	def attributes(self):
+#		return self._attributes
 
-	def __setitem__(self, slices, values):
-		self._data[slices] = values
+#	def __setitem__(self, slices, values):
+#		self._data[slices] = values
 
-	def __getitem__(self, slices):
-		return self._data[slices].copy()
+#	def __getitem__(self, slices):
+#		return self._data[slices].copy()
 
 
 
@@ -65,16 +72,16 @@ class netCDF4Dataset(Dataset):
 		>>> print(ds.attributes)
 		{u'test': u'true'}
 		>>> print(ds.variables)
-		{'test1': <Variable: test1 [<Dimension: x (5) >, <Dimension: y (3) >]>}
+		{'test1': <netCDFVariable: test1 [('x', 5), ('y', 3)]>}
 		>>> ds.variables['test1'][:] = 42.0
-		>>> print(ds.variables['test1'][0,0])
-		42.0
+		>>> print(ds.variables['test1'][0,0].ndarray())
+		[[ 42.]]
 		>>> ds.close()
 		>>> ds = netCDF4Dataset('dice/testing/test.nc')
 		>>> print(ds.attributes)
 		{u'test': u'true'}
-		>>> print(ds.variables['test1'][0,0])
-		42.0
+		>>> print(ds.variables['test1'][0,0].ndarray())
+		[[ 42.]]
 		"""
 
 		self._dimensions = []
@@ -105,7 +112,7 @@ class netCDF4Dataset(Dataset):
 
 
 				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
-				self._variables[varname] = Variable(dims, var.datatype, varname, attrs, data=netCDF4Array(var), dataset=self)
+				self._variables[varname] = netCDFVariable(dims, var.datatype, varname, attrs, data=netCDF4Array(var), dataset=self)
 
 		# Otherwise we are creating a new dataset based on the Dataset instance
 		else:
@@ -128,9 +135,8 @@ class netCDF4Dataset(Dataset):
 			for name, var in dataset.variables.items():
 				dims = tuple([d.name for d in var.dimensions])
 				ncvar = self._ds.createVariable(name, var.dtype, dims, fill_value=False)
-				ncvar[:] = var[:].copy()
-				self.variables[name] = Variable(var.dimensions, var.dtype, name=name, attributes=var.attributes, 
-												data=netCDF4Array(ncvar), dataset=self)
+				ncvar[:] = var.ndarray()
+				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
 
 
 	def makefield(self):

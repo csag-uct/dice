@@ -67,11 +67,11 @@ class Field(object):
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> print(variable)
-		<Variable: rainf [<Dimension: time (372) >, <Dimension: latitude (150) >, <Dimension: longitude (146) >]>
+		<netCDFVariable: rainf [(u'time', 372), (u'latitude', 150), (u'longitude', 146)]>
 		>>> print(variable.attributes['units'])
 		mm/day
-		>>> print(variable[100,70,80])
-		60.6826
+		>>> print(variable[100,70,80].ndarray())
+		[[[ 60.6825943]]]
 		>>> f = Field(variable)
 		"""
 
@@ -94,6 +94,10 @@ class Field(object):
 			return None
 
 	@property
+	def shape(self):
+		return self.variable.shape
+
+	@property
 	def latitudes(self):
 
 		cvs = self.coordinate_variables
@@ -102,7 +106,7 @@ class Field(object):
 		# If latitude and longitude map to different dimensions and we aren't already 2D
 		if cvs['latitude'][0][0] != cvs['longitude'][0][0] and len(latitudes.shape) == 1:
 			longitudes = self.coordinate('longitude')
-			return np.broadcast_to(latitudes[:].T, (longitudes.shape[0], latitudes.shape[0])).T
+			return np.broadcast_to(latitudes.ndarray().T, (longitudes.shape[0], latitudes.shape[0])).T
 		
 		# Otherwise we just return original array
 		else:
@@ -117,7 +121,7 @@ class Field(object):
 		# If latitude and longitude map to different dimensions and we aren't already 2D
 		if cvs['latitude'][0][0] != cvs['longitude'][0][0] and len(longitudes.shape) == 1:
 			latitudes = self.coordinate('latitude')
-			return np.broadcast_to(longitudes[:].T, (latitudes.shape[0], longitudes.shape[0]))
+			return np.broadcast_to(longitudes.ndarray().T, (latitudes.shape[0], longitudes.shape[0]))
 		
 		# Otherwise we just return original array
 		else:
@@ -126,7 +130,7 @@ class Field(object):
 
 	@property
 	def times(self):
-		return netCDF4.num2date(self.coordinate('time')[:], self.coordinate('time').attributes['units'])
+		return netCDF4.num2date(self.coordinate('time').ndarray(), self.coordinate('time').attributes['units'])
 
 
 	@property
@@ -144,7 +148,7 @@ class Field(object):
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print s
 		[slice(None, None, None), 4, 77]
-		>>> f[s][:5]
+		>>> f[s][:5].ndarray().flatten()
 		array([  28.29000473,   39.90293503,   17.97706604,  119.78000641,
 		        127.48999023], dtype=float32)
 		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
@@ -153,17 +157,17 @@ class Field(object):
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print s
 		[slice(None, None, None), 27, 98]
-		>>> f[s][0]
-		3.8146973e-06
+		>>> f[s][0].ndarray()
+		array([[[  3.81469727e-06]]], dtype=float32)
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
-		>>> print ds.variables['name'][:][s[1]]
-		KENILWORTH RACE COURSE ARS
+		>>> print ds.variables['name'][:][s[1]].ndarray()
+		[u'KENILWORTH RACE COURSE ARS']
 		>>> s = f.map(id='0021178AW')
-		>>> print ds.variables['name'][:][s[1]]
-		CAPE TOWN WO
+		>>> print ds.variables['name'][:][s[1]].ndarray()
+		[u'CAPE TOWN WO']
 		"""
 
 		# Create the results array
@@ -218,10 +222,10 @@ class Field(object):
 				
 				# There should be a better way to differentiate between numeric and string methods
 				try:
-					distance += np.power(mapping[1][:] - float(kwargs[name]),2)
+					distance += np.power(mapping[1].ndarray() - float(kwargs[name]),2)
 				except:
 					try:
-						distance = (mapping[1][:] != kwargs[name]).astype(np.int)
+						distance = (mapping[1].ndarray() != kwargs[name]).astype(np.int)
 					except:
 						pass
 
@@ -245,11 +249,23 @@ class Field(object):
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
-		>>> f.subset(latitude=(-30,-20), longitude=(20,25), elevation=(1000,))
+		>>> s = f.subset(latitude=(-30,-20), longitude=(20,30), vertical=(1500,))
+
+
+		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
+		>>> variable = ds.variables['pr']
+		>>> f = CFField(variable)
+		>>> s = f.subset(latitude=(-30,-20), longitude=(20,25), vertical=(1000,))
+
 		"""
 
+		print self.coordinate_variables
+		print self.ancil_variables
+
+		mappings = {}
+
 		for name, value in kwargs.items():
-			print name
+			#print name
 
 			# First convert single values to tuples
 			if type(value) not in [tuple, list]:
@@ -257,15 +273,48 @@ class Field(object):
 
 			# Check if variable is a coordinate variable
 			if name in self.coordinate_variables:
-				variable = self.coordinate_variables[name]
+				mapping, variable = self.coordinate_variables[name]
 
 			# Check if its an ancilary variable
 			elif name in self.ancil_variables:
-				variable = self.ancil_variables[name]
+				mapping, variable = self.ancil_variables[name]
 
-			print variable
+			else:
+				continue
+
+			#print variable, mapping, value
+
+			mask = variable[:] < value[0]
+
+			if len(mask) > 1 and len(value) > 1:
+				mask = np.logical_or(mask, (variable[:] > value[1]))
+
+			#print(value, variable[:], mask)
+
+			mapping = tuple(mapping)
+
+			if mapping in mappings:
+				mappings[mapping] = np.logical_or(mappings[mapping], mask)
+
+			else:
+				mappings[mapping] = mask
 
 
+		subset = [slice(0,size) for size in list(self.shape)]
+		print(subset)
+
+		for mapping, mask in mappings.items():
+
+			nonzero = np.nonzero(~mask)
+
+			for i in range(0,len(nonzero)):
+				start, stop = nonzero[i].min(), nonzero[i].max()
+				subset[mapping[i]] = slice(start, stop+1)
+
+		print(subset)
+
+
+		result = self.__class__(self.variable[subset])
 
 
 
@@ -366,14 +415,14 @@ class CFField(Field):
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> print(variable)
-		<Variable: rainf [<Dimension: time (372) >, <Dimension: latitude (150) >, <Dimension: longitude (146) >]>
-		>>> print(variable[100,70,80])
-		60.6826
+		<netCDFVariable: rainf [(u'time', 372), (u'latitude', 150), (u'longitude', 146)]>
+		>>> print(variable[100,70,80].ndarray())
+		[[[ 60.6825943]]]
 		>>> print(variable.attributes['units'])
 		mm/day
 		>>> f = CFField(variable)
 		>>> print(f.coordinate_variables)
-		{'latitude': ([1], <Variable: latitude [<Dimension: latitude (150) >]>), 'longitude': ([2], <Variable: longitude [<Dimension: longitude (146) >]>), 'time': ([0], <Variable: time [<Dimension: time (372) >]>)}
+		{'latitude': ([1], <netCDFVariable: latitude [(u'latitude', 150)]>), 'longitude': ([2], <netCDFVariable: longitude [(u'longitude', 146)]>), 'time': ([0], <netCDFVariable: time [(u'time', 372)]>)}
 		>>> print(f.latitudes[:2,:2])
 		[[-36.25 -36.25]
 		 [-35.75 -35.75]]
