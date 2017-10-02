@@ -93,9 +93,10 @@ class Variable(object):
 		>>> V.units = 'kg/m2/s'
 		"""
 
-		self.dimensions = []
+		self._dimensions = []
 		self._dtype = dtype
 		self.name = name
+		self._attributes = {}
 		self.dataset = dataset
 		self._data = False
 
@@ -115,18 +116,34 @@ class Variable(object):
 		# Dimensions are immutable so turn the list into a tuple
 		self._dimensions = tuple(self._dimensions)
 
-		# Passed data must be an array instance
+		# Handle passed data which must either be a corrected shaped and typed Array instance, or a correctly
+		# shaped and a castable typed ndarray or masked_array instance, or None, in which case a new empty Array instance of 
+		# subclass storage is instantiated
 		if isinstance(data, Array):
+
+			if data.shape != self.shape:
+				raise Exception("supplied data Array has shape {}, Variable definition has shape {}".format(data.shape, self.shape))
+
+			if data.dtype != self.dtype:
+				raise Exception("supplied data Array has dtype {}, Variable definition has dtype {}".format(data.dtype, self.dtype))
+
 			self._data = data
+	
+		elif isintance(data, np.ndarray) or isintance(data, np.masked_array):
+			self._data = storage(self.shape, dtype)
+			self._data[:] = data
+
 		else:
 			self._data = storage(self.shape, dtype)
 
-		self._attributes = {}
 
-		if type(attributes) == dict:
+		# Check that attributes is a dict
+		if isintance(attributes, dict):
 			self._attributes = attributes
 		else:
 			return TypeError('attributes must be a dictionary')
+
+
 
 	def __repr__(self):
 		if self.name:
