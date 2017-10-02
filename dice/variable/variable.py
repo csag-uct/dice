@@ -69,6 +69,7 @@ class Dimension(object):
 	def asjson(self):
 		return {'name':self.name, 'size':self.size}
 
+
 class Variable(object):
 	"""
 	A variable encapsulates an array with named dimensions and attributes
@@ -92,12 +93,13 @@ class Variable(object):
 		>>> V.units = 'kg/m2/s'
 		"""
 
-		self._dimensions = []
+		self.dimensions = []
 		self._dtype = dtype
 		self.name = name
 		self.dataset = dataset
+		self._data = False
 
-		# dimensions argument should be a tuple of either Dimension instances, or 2-tuples
+		# dimensions argument should be an iterable of Dimension instances or 2-tuples
 		# in the form (name, size)
 		for d in dimensions:			
 
@@ -110,7 +112,11 @@ class Variable(object):
 			else:
 				raise TypeError('{} is not a 2-tuple (name, size) or a Dimension instance'.format(d))
 
-		if data:
+		# Dimensions are immutable so turn the list into a tuple
+		self._dimensions = tuple(self._dimensions)
+
+		# Passed data must be an array instance
+		if isinstance(data, Array):
 			self._data = data
 		else:
 			self._data = storage(self.shape, dtype)
