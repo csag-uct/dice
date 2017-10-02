@@ -2,10 +2,72 @@ from abc import ABCMeta, abstractmethod
 
 from copy import copy
 
-from dice.array import Dimension
 from dice.array import Array
 from dice.array import numpyArray
 
+
+class Dimension(object):
+	"""
+	A dimension defines the axis of a multi-dimensional variable.  It simply has a name
+	and a size.  A dimension can be fixed size (default) or not fixed size indicating whether 
+	the size can or cannot be changed after creation.  This is relevant to some array storage 
+	formats	that do not allow dimension sizes to change after creation
+	"""
+
+	def __init__(self, name, size, fixed=True):
+		"""
+		A Dimension is created with a name and size and is fixed in size by default:
+
+		>>> d = Dimension('test', 10)
+		>>> print(d)
+		<Dimension: test (10) >
+
+		Setting fixed to False lets the size be changed
+		>>> d = Dimension('test2', 10, fixed=False)
+		>>> d.size = 20
+		>>> print(d)
+		<Dimension: test2 (20) >
+		"""
+
+		self.name = name
+		self._size = size
+
+		# fixed must be boolean
+		if type(fixed) == bool:
+			self.fixed = fixed
+		else:
+			raise TypeError('unlimited must be boolean, True or False')
+
+
+	# At some point we might want to return a calculated value, so writing this as a property function
+	@property
+	def size(self):
+		return self._size
+
+
+	@size.setter
+	def size(self, size):
+		"""
+		Changes the size of a dimension. Raises an exception if the dimension is fixed.  Checks for positve
+		integer values
+		"""
+
+		if self.fixed:
+			raise ValueError('cannot change the size of fixed dimension {}'.format(self.name))
+
+		# size must be a postive integer
+		if size >= 0 and type(size) == int:
+			self._size = size
+		else:
+			raise TypeError('size must be positive int')
+
+
+
+	def __repr__(self):
+		return "<Dimension: {} ({}) >".format(self.name, self.size)
+
+	def asjson(self):
+		return {'name':self.name, 'size':self.size}
 
 class Variable(object):
 	"""
@@ -79,7 +141,11 @@ class Variable(object):
 
 	@property
 	def shape(self):
-		return tuple([d.size for d in self._dimensions])
+
+		if self._data:
+			return self._data.shape
+		else:
+			return tuple([d.size for d in self._dimensions])
 
 	@property
 	def dtype(self):
@@ -104,7 +170,7 @@ class Variable(object):
 		for d, size in zip(self.dimensions, data.shape):
 			dims.append(Dimension(d.name, size, d.fixed))
 
-		result = self.__class__(dims, data.dtype, name=self.name, attributes=self.attributes, data=data)
+		result = self.__class__(dims, data.dtype, name=self.name, attributes=self.attributes, dataset=self.dataset, data=data)
 
 		return result
 
