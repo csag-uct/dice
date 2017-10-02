@@ -2,6 +2,8 @@ from abc import ABCMeta, abstractmethod
 
 from copy import copy
 
+import numpy as np
+
 from dice.array import Array
 from dice.array import numpyArray
 
@@ -129,7 +131,7 @@ class Variable(object):
 
 			self._data = data
 	
-		elif isintance(data, np.ndarray) or isintance(data, np.masked_array):
+		elif isinstance(data, np.ndarray) or isinstance(data, np.ma.MaskedArray):
 			self._data = storage(self.shape, dtype)
 			self._data[:] = data
 
@@ -138,7 +140,7 @@ class Variable(object):
 
 
 		# Check that attributes is a dict
-		if isintance(attributes, dict):
+		if isinstance(attributes, dict):
 			self._attributes = attributes
 		else:
 			return TypeError('attributes must be a dictionary')
