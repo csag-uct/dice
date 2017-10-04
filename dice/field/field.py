@@ -248,24 +248,24 @@ class Field(object):
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
+		>>> print(variable)
+		<netCDFVariable: pr [(u'time', 20454), (u'feature', 2625)]>
 		>>> f = CFField(variable)
 		>>> s = f.subset(latitude=(-30,-20), longitude=(20,30), vertical=(1500,))
-
-
+		>>> print(s.longitudes.ndarray().min(), s.longitudes.ndarray().max())
+		(-9.8803997, 37.8587)
 		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> s = f.subset(latitude=(-30,-20), longitude=(20,25), vertical=(1000,))
-
+		>>> print(s.longitudes.ndarray().min(), s.longitudes.ndarray().max())
+		(20.240000000000002, 24.640000000000011)
 		"""
-
-		print self.coordinate_variables
-		print self.ancil_variables
 
 		mappings = {}
 
 		for name, value in kwargs.items():
-			#print name
+			#print name, value
 
 			# First convert single values to tuples
 			if type(value) not in [tuple, list]:
@@ -284,11 +284,11 @@ class Field(object):
 
 			#print variable, mapping, value
 
-			mask = variable[:] < value[0]
-			print mask, value
+			vals = variable.ndarray()
+			mask = vals < value[0]
 
 			if len(mask) > 1 and len(value) > 1:
-				mask = np.logical_or(mask, (variable[:] > value[1]))
+				mask = np.logical_or(mask, (vals > value[1]))
 
 			#print(value, variable[:], mask)
 
@@ -302,7 +302,7 @@ class Field(object):
 
 
 		subset = [slice(0,size) for size in list(self.shape)]
-		print(subset)
+		#print(subset)
 
 		for mapping, mask in mappings.items():
 
@@ -312,11 +312,26 @@ class Field(object):
 				start, stop = nonzero[i].min(), nonzero[i].max()
 				subset[mapping[i]] = slice(start, stop+1)
 
-		print(subset)
+
+		#print zip(self.variable.dimensions, subset)
+		variable = self.variable[subset]
+		variables = dict({self.variable.name: variable})
+		#print variable.attributes
+
+		for coord_name, map_var in self.coordinate_variables.items():
+			
+			coord_slice = []
+			
+			for d, s in zip(self.variable.dimensions, subset):
+				if d in map_var[1].dimensions:
+					coord_slice.append(s)
+
+			variables[map_var[1].name] = map_var[1][coord_slice]
 
 
-		result = self.__class__(self.variable[subset])
+		dataset = Dataset(variable.dimensions, self.variable.dataset.attributes, variables)
 
+		return CFField(variable)
 
 
 	def features(self, values=None):
@@ -460,7 +475,11 @@ class CFField(Field):
 
 				mapping = []
 				for dim in var.dimensions:
-					mapping.append(self.variable.dimensions.index(dim))
+					try:
+						mapping.append(self.variable.dimensions.index(dim))
+					except:
+						pass
+
 
 				if coordinate_name:
 					self.coordinate_variables[coordinate_name] = (mapping, var)
