@@ -40,6 +40,13 @@ class Dimension(object):
 		else:
 			raise TypeError('unlimited must be boolean, True or False')
 
+	# Overide instance level equality operators
+	def __eq__(self, other):
+		return self.size == other.size and self.name == other.name
+
+	def __ne__(self, other):
+		return not self.__eq__(other)
+		
 
 	# At some point we might want to return a calculated value, so writing this as a property function
 	@property
@@ -159,6 +166,7 @@ class Variable(object):
 		Return variable data as an numpy instance
 		"""
 		return self._data.ndarray()
+	
 	
 	def asjson(self, data=False):
 		return {'dimensions':[], 'dtype':repr(self.dtype), 'attributes':self.attributes.copy()}
