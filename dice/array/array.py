@@ -17,19 +17,32 @@ class Array(object):
 	def __init__(self, shape, dtype):
 
 		if type(shape) == tuple:
-			self.shape = shape
+			self._shape = shape
 		else:
 			raise TypeError('shape must be a tuple')
 
 		self.dtype = dtype
 
 		# Arrays may share a data store but apply different views or subsets
-		self._view = real_slices(self.shape)
+		self._view = real_slices(shape)
+
+
+	@property
+	def shape(self):
+
+		result = []
+		for s in self._view:
+			if isinstance(s, slice):
+				result.append(s.stop - s.start)
+			else:
+				result.append(len(s))
+
+		return tuple(result)
 
 
 	def __getitem__(self, slices):
 
-		shape, view = reslice(self.shape, self._view, slices)
+		shape, view = reslice(self._shape, self._view, slices)
 
 		result = self.__class__(shape, self.dtype)
 		result._view = view
@@ -40,7 +53,7 @@ class Array(object):
 	def __setitem__(self, slices, values):
 		
 		# Combine slices with the view to get data indices
-		shape, slices = reslice(self.shape, self._view, slices)
+		shape, slices = reslice(self._shape, self._view, slices)
 		
 		self._data[slices] = values
 

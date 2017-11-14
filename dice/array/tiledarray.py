@@ -1,6 +1,6 @@
 import numpy as np
 
-from array import Array, ArrayError
+from array import Array
 from array import real_slices, reslice
 
 from nparray import numpyArray

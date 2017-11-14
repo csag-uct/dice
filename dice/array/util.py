@@ -1,3 +1,5 @@
+import numpy as np
+
 def real_slices(shape, slices=()):
 	"""Turns a possibly truncated mixture of slices and integer indices into a full tuple with 
 	the same length as dimensionality, of valid array indices (slice, integer, or iterable)

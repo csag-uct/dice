@@ -253,7 +253,7 @@ class Field(object):
 		>>> f = CFField(variable)
 		>>> s = f.subset(latitude=(-30,-20), longitude=(20,30), vertical=(1500,))
 		>>> print(s.longitudes.ndarray().min(), s.longitudes.ndarray().max())
-		(-9.8803997, 37.8587)
+		(23.554399, 29.983801)
 		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
@@ -310,16 +310,21 @@ class Field(object):
 
 			for i in range(0,len(nonzero)):
 				start, stop = nonzero[i].min(), nonzero[i].max()
-				subset[mapping[i]] = slice(start, stop+1)
+
+			 	# 1D mappings could be spare masks, rather than ranges
+			 	if len(nonzero) == 1:
+			 		if stop - start + 1 > nonzero[0].shape[0]:
+			 			subset[mapping[i]] = nonzero[0]
+
+				# otherwise we construct a slice
+			 	else:
+					subset[mapping[i]] = slice(start, stop+1)
 
 
-		#print zip(self.variable.dimensions, subset)
 		variable = self.variable[subset]
 		variables = dict({self.variable.name: variable})
-		#print variable.attributes
 
 		for coord_name, map_var in self.coordinate_variables.items():
-			
 			coord_slice = []
 			
 			for d, s in zip(self.variable.dimensions, subset):
@@ -329,9 +334,24 @@ class Field(object):
 			variables[map_var[1].name] = map_var[1][coord_slice]
 
 
+		for ancil_name, map_var in self.ancil_variables.items():
+			ancil_slice = []
+			
+			for d, s in zip(self.variable.dimensions, subset):
+				if d in map_var[1].dimensions:
+					ancil_slice.append(s)
+
+			variables[map_var[1].name] = map_var[1][ancil_slice]
+
+		#print variables
+
 		dataset = Dataset(variable.dimensions, self.variable.dataset.attributes, variables)
 
-		return CFField(variable)
+		result = CFField(variable)
+
+		#print dataset.variables
+
+		return result
 
 
 	def features(self, values=None):
@@ -347,6 +367,7 @@ class Field(object):
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
+		>>> print(f.latitudes[0].ndarray()[0])
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
@@ -379,17 +400,17 @@ class Field(object):
 			# Iterate through features by iterating through longitude
 			for feature_id in range(self.longitudes.shape[0]):
 
-				coordinates = [float(self.longitudes[feature_id]), float(self.latitudes[feature_id])]
+				coordinates = [float(self.longitudes.ndarray()[feature_id]), float(self.latitudes.ndarray()[feature_id])]
 
 				if 'vertical' in self.coordinate_variables:
-					coordinates.extend([float(self.vertical[feature_id])])
+					coordinates.extend([float(self.vertical.ndarray()[feature_id])])
 
 				feature = {"type":"Feature", "geometry":{"type": "Point", "coordinates":coordinates}}
 
 				# Feature properties come form ancilary variables
 				properties = {}
 				for name, mapping in self.ancil_variables.items():
-					properties[name] = mapping[1][feature_id]
+					properties[name] = mapping[1][feature_id].ndarray()[0]
 
 				# Process data based properties
 				if values == 'last':
@@ -461,7 +482,7 @@ class CFField(Field):
 
 
 		for name, var in self.variable.dataset.variables.items():
-
+		#	print name, var, var.dimensions, self.variable.dimensions
 			# If we have units, check if they are coordinate units, if not coordinate_name will be None
 			if 'units' in var.attributes:
 				coordinate_name = self.units_match(var.attributes['units'])
@@ -472,7 +493,7 @@ class CFField(Field):
 			# 1) Its in the coordinates attribute list
 			# 2) Its dimensions are a reduced subset of the variables dimensions
 			if (name in coordinates) or (set(var.dimensions).issubset(self.variable.dimensions) and len(var.dimensions) < len(self.variable.dimensions)):
-
+				
 				mapping = []
 				for dim in var.dimensions:
 					try:
@@ -480,11 +501,12 @@ class CFField(Field):
 					except:
 						pass
 
-
 				if coordinate_name:
 					self.coordinate_variables[coordinate_name] = (mapping, var)
 				else:
 					self.ancil_variables[name] = (mapping, var)
+
+		#print "CFField: ", self.coordinate_variables
 
 
 	def units_match(self, units):

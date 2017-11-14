@@ -1,8 +1,8 @@
 import netCDF4
 
-from dice.array import Array, Dimension
+from dice.array import Array
 from dice.array import reslice
-from dice.variable import Variable
+from dice.variable import Dimension, Variable
 
 from dataset import Dataset
 from dataset import DatasetError

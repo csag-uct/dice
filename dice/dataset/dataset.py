@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import re
 
-from dice.variable import Variable
+from dice.variable import Variable, Dimension
 
 import netCDF4
 
@@ -72,21 +72,19 @@ class Dataset():
 					mynames = [d.name for d in self._dimensions]
 
 					# Try and find a dimension with the new name
-					try:
-						gotitalready = mynames.index(dimension.name)
+					gotitalready = mynames.index(dimension.name)
 					
 					# if we fail, then we simply add the new dimensions to the dataset
-					except:
+					if gotitalready < 0:
 						self._dimensions.append(dimension)
 
 					# Otherwise we need to check if the sizes match, if not we throw an exception, if yes, we carry on
 					else:
 						if dimension.size != self._dimensions[gotitalready].size:
-							raise DatasetError('Cannot add variable {} with dimension {} when dimension {} already exists in dataset'
-												.format(var, dimension, self._dimensions[gotitalready]))
+							raise Exception('Cannot add variable {} with dimension {} when dimension {} already exists in dataset'.format(var, dimension, self._dimensions[gotitalready]))
 
 				# Set the variables dataset attribute
-				var._dataset = self
+				var.dataset = self
 
 				# Add the variable to the local dictionary
 				self._variables[name] = var
