@@ -61,18 +61,13 @@ class Field(object):
 
 	def __init__(self, variable):
 		"""A field encapsulates a Variable with meta-data about associated coordinate variables either
-		explicitly defined or implicitely defined through conventions such as CF conventions
+		explicitly defined or implicitely defined through conventions such as CF conventions.  It also attempts
+		to identify ancilary variables which are variables that associated with a data variable such as station names,
+		grid altitudes, etc.  
 
-		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
-		>>> variable = ds.variables['rainf']
-		>>> print(variable)
-		<netCDFVariable: rainf [(u'time', 372), (u'latitude', 150), (u'longitude', 146)]>
-		>>> print(variable.attributes['units'])
-		mm/day
-		>>> print(variable[100,70,80].ndarray())
-		[[[ 60.6825943]]]
-		>>> f = Field(variable)
+		This class should not be used directly because it doesn't implement any conventions and so does not
+		identify coordinate variables or ancilary variables.
+
 		"""
 
 		self.variable = variable
