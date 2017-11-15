@@ -246,14 +246,14 @@ class Field(object):
 	def subset(self, **kwargs):
 		"""
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
-		>>> print(variable)
-		<netCDFVariable: pr [(u'time', 20454), (u'feature', 2625)]>
 		>>> f = CFField(variable)
 		>>> s = f.subset(latitude=(-30,-20), longitude=(20,30), vertical=(1500,))
 		>>> print(s.longitudes.ndarray().min(), s.longitudes.ndarray().max())
 		(23.554399, 29.983801)
+
 		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
@@ -343,13 +343,10 @@ class Field(object):
 
 			variables[map_var[1].name] = map_var[1][ancil_slice]
 
-		#print variables
 
 		dataset = Dataset(variable.dimensions, self.variable.dataset.attributes, variables)
 
 		result = CFField(variable)
-
-		#print dataset.variables
 
 		return result
 
@@ -367,10 +364,13 @@ class Field(object):
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
-		>>> print(f.latitudes[0].ndarray()[0])
+		>>> features = f.features()
+		>>> print(features['features'][0]['properties'])
+		{u'name': u'BOSCHRAND', u'id': u'0585409_W'}
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
+		>>> features = f.features()
 		"""
 
 		# First we need to determine the type of grid we have.  If latitude and longitude are 1D and both
