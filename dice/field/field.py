@@ -153,29 +153,37 @@ class Field(object):
 		"""Maps from world coordinates to array indices
 
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print s
 		[slice(None, None, None), 4, 77]
-		>>> f[s][:5].ndarray().flatten()
-		array([  28.29000473,   39.90293503,   17.97706604,  119.78000641,
-		        127.48999023], dtype=float32)
+		>>> print f.latitudes[s[1],s[2]].ndarray()
+		[[-34.25]]
+		>>> print f.longitudes[s[1], s[2]].ndarray()
+		[[ 18.25]]
+
 		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print s
 		[slice(None, None, None), 27, 98]
-		>>> f[s][0].ndarray()
-		array([[[  3.81469727e-06]]], dtype=float32)
+		>>> print f.latitudes[s[1],s[2]].ndarray()
+		[[-33.88]]
+		>>> print f.longitudes[s[1], s[2]].ndarray()
+		[[ 18.48]]
+
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
+		
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print ds.variables['name'][:][s[1]].ndarray()
 		[u'KENILWORTH RACE COURSE ARS']
+
 		>>> s = f.map(id='0021178AW')
 		>>> print ds.variables['name'][:][s[1]].ndarray()
 		[u'CAPE TOWN WO']
