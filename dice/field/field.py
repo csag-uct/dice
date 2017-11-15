@@ -66,58 +66,74 @@ class Field(object):
 		grid altitudes, etc.  
 
 		This class should not be used directly because it doesn't implement any conventions and so does not
-		identify coordinate variables or ancilary variables.
+		identify coordinate variables or ancilary variables.  A derived class like CFField should be used instead.
 
 		"""
 
 		self.variable = variable
 
+		# As this is a base class, coordinate variables and ancil variables are empty
 		self.coordinate_variables = {}
 		self.ancil_variables = {}
 
 
+	# Get item just delagates to the upstream variable __getitem__
 	def __getitem__(self, slices):
 		return self.variable[slices]
 
+
+	# Tries to find a coordinate with provided name and returns associated variable or None
 	def coordinate(self, name):
 
 		if name in self.coordinate_variables:
 			mapping, var  = self.coordinate_variables[name]
 			return var
-		
 		else:
 			return None
 
+	# Shape delegates to the upstream variable shape property
 	@property
 	def shape(self):
 		return self.variable.shape
 
+
+	# Return lattitude coordinate Variable instance, but try to broadcast to 2D if possible
 	@property
 	def latitudes(self):
 
 		cvs = self.coordinate_variables
-		latitudes = self.coordinate('latitude')[:]
+		latitudes = self.coordinate('latitude')
 
 		# If latitude and longitude map to different dimensions and we aren't already 2D
 		if cvs['latitude'][0][0] != cvs['longitude'][0][0] and len(latitudes.shape) == 1:
-			longitudes = self.coordinate('longitude')
-			return np.broadcast_to(latitudes.ndarray().T, (longitudes.shape[0], latitudes.shape[0])).T
 		
+			longitudes = self.coordinate('longitude')
+		
+			latitudes2d = Variable([latitudes.dimensions[0], longitudes.dimensions[0]], latitudes.dtype)
+			latitudes2d[:] = np.broadcast_to(latitudes.ndarray().T, (longitudes.shape[0], latitudes.shape[0])).T
+			return latitudes2d
+		
+
 		# Otherwise we just return original array
 		else:
 			return latitudes
+
 
 	@property
 	def longitudes(self):
 
 		cvs = self.coordinate_variables
-		longitudes = self.coordinate('longitude')[:]
+		longitudes = self.coordinate('longitude')
 
 		# If latitude and longitude map to different dimensions and we aren't already 2D
 		if cvs['latitude'][0][0] != cvs['longitude'][0][0] and len(longitudes.shape) == 1:
+
 			latitudes = self.coordinate('latitude')
-			return np.broadcast_to(longitudes.ndarray().T, (latitudes.shape[0], longitudes.shape[0]))
-		
+			
+			longitudes2d = Variable([latitudes.dimensions[0], longitudes.dimensions[0]], latitudes.dtype)
+			longitudes2d[:] = np.broadcast_to(longitudes.ndarray().T, (latitudes.shape[0], longitudes.shape[0]))
+			return longitudes2d
+
 		# Otherwise we just return original array
 		else:
 			return longitudes
@@ -455,10 +471,10 @@ class CFField(Field):
 		>>> f = CFField(variable)
 		>>> print(f.coordinate_variables)
 		{'latitude': ([1], <netCDFVariable: latitude [(u'latitude', 150)]>), 'longitude': ([2], <netCDFVariable: longitude [(u'longitude', 146)]>), 'time': ([0], <netCDFVariable: time [(u'time', 372)]>)}
-		>>> print(f.latitudes[:2,:2])
+		>>> print(f.latitudes[:2,:2].ndarray())
 		[[-36.25 -36.25]
 		 [-35.75 -35.75]]
-		>>> print(f.longitudes[:2,:2])
+		>>> print(f.longitudes[:2,:2].ndarray())
 		[[-20.25 -19.75]
 		 [-20.25 -19.75]]
 		>>> print(f.times[:5])
