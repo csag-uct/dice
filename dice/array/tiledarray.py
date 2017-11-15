@@ -110,7 +110,7 @@ class tiledArray(Array):
 		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
 		>>> a[0:16,0:20] = 42.0
 		>>> a[7,17]
-		tiledArray([[ 42.]])
+		[[ 42.]]
 		"""
 #		print self.tiles, self._view, slices, values
 		
@@ -145,7 +145,7 @@ class tiledArray(Array):
 		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
 		>>> a[7:14,3:12] = 42.0
 		>>> a[7,2:5]
-		tiledArray([[ nan  42.  42.]])
+		[[ nan  42.  42.]]
 		"""
 
 		shape, view = reslice(self.shape, self._view, slices)
@@ -161,18 +161,18 @@ class tiledArray(Array):
 		return result
 
 
-	def copy(self, astype=None):
+	def ndarray(self, astype=None):
 		""" Returns a copy, default type is numpy ndarray of the array
 		
 		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
 		>>> a[:] = np.arange(320).reshape((16,20))
 		>>> a[7,2:5]
-		tiledArray([[ 142.  143.  144.]])
+		[[ 142.  143.  144.]]
 		>>> a[7,2:5] = 96
 		>>> a[6:7,0:5]
-		tiledArray([[ 120.  121.  122.  123.  124.]])
+		[[ 120.  121.  122.  123.  124.]]
 		>>> a[6:7,0:5][:,1:3]
-		tiledArray([[ 121.  122.]])
+		[[ 121.  122.]]
 		"""
 
 		if astype != None:
@@ -190,14 +190,14 @@ class tiledArray(Array):
 				data = np.nan
 
 			else:
-				data = tile['data'][tile_slices].copy()
+				data = tile['data'][tile_slices].ndarray()
 
 			result[data_slices] = data
 
 		return result
 
 	def __repr__(self):
-		return "tiledArray({})".format(str(self.copy()))
+		return str(self.ndarray())
 
 	def apply(self, func, axis=None):
 		"""Apply an array function along successive axes
@@ -207,7 +207,7 @@ class tiledArray(Array):
 		>>> b.shape
 		(20,)
 		>>> b[3:7]
-		tiledArray([ 42.  42.  42.  42.])
+		[ 42.  42.  42.  42.]
 		"""
 
 		outshape = []
@@ -243,7 +243,7 @@ class tiledArray(Array):
 				tmp[data_slices] = np.nan
 
 			else:
-				tmp[data_slices] = tile['data'][tile_slices].apply(func, axis=axis).copy()
+				tmp[data_slices] = tile['data'][tile_slices].apply(func, axis=axis).ndarray()
 
 		if func == 'mean':
 			result[:] = tmp.mean(axis=axis)
