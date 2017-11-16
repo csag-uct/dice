@@ -111,8 +111,9 @@ class tiledArray(Array):
 		>>> a[0:16,0:20] = 42.0
 		>>> a[7,17]
 		[[ 42.]]
+
+		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5), storage=pgArray)
 		"""
-#		print self.tiles, self._view, slices, values
 		
 		# Iterate through all tiles intersecting slices
 		for index in self.find_tiles(slices):
@@ -122,7 +123,6 @@ class tiledArray(Array):
 			tileshape = tuple(tile['ranges'][:,1] - tile['ranges'][:,0])
 			tile_slices, data_slices = self._tile_slices(tile, slices)
 
-#			print index, tileshape, tile_slices, data_slices
 
 			# Lazy allocation
 			if not tile['data']:

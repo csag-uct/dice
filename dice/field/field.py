@@ -189,7 +189,7 @@ class Field(object):
 		[u'CAPE TOWN WO']
 		"""
 
-		# Create the results array
+		# Create the results array to hold the array indices (slices)
 		result = [slice(None)]*len(self.variable.shape)
 
 		# We need to keep track of processed arguments
@@ -264,12 +264,18 @@ class Field(object):
 
 	def subset(self, **kwargs):
 		"""
+		Subsets a field and returns a new Dataset instance hosting the subsetted field as well as 
+		subsetted coordinate and ancilary variables.  Subsetting is lazy (applies slices to original variable
+		arrays) so this is a cheap operation.
+
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
 
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> s = f.subset(latitude=(-30,-20), longitude=(20,30), vertical=(1500,))
+		>>> print(s.shape)
+		(20454, 348)
 		>>> print(s.longitudes.ndarray().min(), s.longitudes.ndarray().max())
 		(23.554399, 29.983801)
 

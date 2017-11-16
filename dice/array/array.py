@@ -66,7 +66,7 @@ class Array(object):
 		"""
 
 		# Lazy allocation
-		if type(self._data) == bool:
+		if type(self._data) == bool and self._data == False:
 			self._data = np.empty(self.shape, dtype=self.dtype)
 
 		return self._data.__getitem__(self._view)
