@@ -12,7 +12,7 @@ class Array(object):
 	implemented.  These functions must be implemented by actual implementations in derived classes
 	"""
 
-	__metaclass__ = ABCMeta
+	#__metaclass__ = ABCMeta
 
 	def __init__(self, shape, dtype):
 
