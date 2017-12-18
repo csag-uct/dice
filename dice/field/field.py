@@ -133,6 +133,7 @@ class Field(object):
 		"""Maps from world coordinates to array indices
 
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+		>>> from dice.field import CFField
 
 		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
@@ -249,10 +250,12 @@ class Field(object):
 		arrays) so this is a cheap operation.
 
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+		>>> from dice.field import CFField
 
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
+
 		>>> s = f.subset(latitude=(-30,-20), longitude=(20,30), vertical=(1500,))
 		>>> print(s.shape)
 		(20454, 348)
@@ -351,7 +354,7 @@ class Field(object):
 
 		dataset = Dataset(variable.dimensions, self.variable.dataset.attributes, variables)
 
-		result = CFField(variable)
+		result = self.__class__(variable)
 
 		return result
 
@@ -366,6 +369,8 @@ class Field(object):
 		The timestamp parameter can be one of None, 'last', 'range'
 
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+		>>> from dice.field import CFField
+
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
@@ -443,7 +448,21 @@ class Field(object):
 		return result
 
 
-		
+
+	def groupby(self, coordinate, func):
+
+		"""
+		Generate groups (subsets) across the specified coordinate using the grouping function func
+
+		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+		>>> from dice.field import CFField
+		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> variable = ds.variables['pr']
+		>>> f = CFField(variable)
+
+		"""
+
+
 
 
 
