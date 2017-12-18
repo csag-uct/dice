@@ -9,45 +9,12 @@ import netCDF4
 import json
 
 
-cffield_unitsmap = {
-	'degrees north': 'latitude',
-	'degrees_north': 'latitude',
-	'degree_north': 'latitude', 
-	'degree_N': 'latitude',
-	'degrees_N': 'latitude',
-	'degreeN': 'latitude',
-	'degreesN': 'latitude',
-
-	'degrees east': 'longitude',
-	'degrees_east': 'longitude',
-	'degree_east': 'longitude', 
-	'degree_E': 'longitude',
-	'degrees_E': 'longitude',
-	'degreeE': 'longitude',
-	'degreesE': 'longitude',
-
-	'bar': 'vertical',
-	'millibar': 'vertical',
-	'decibar': 'vertical',
-	'atmosphere': 'vertical',
-	'atm': 'vertical',
-	'pascal': 'vertical',
-	'Pa': 'vertical',
-	'hPa': 'vertical',
-
-	'meter': 'vertical',
-	'metre': 'vertical',
-	'kilometer': 'vertical',
-	'km': 'vertical',
-
-	'seconds since *': 'time',
-	'minutes since *': 'time',
-	'hours since *': 'time',
-	'days since *': 'time',
-}
 
 
 class FieldError(Exception):
+	"""
+	Pretty generic Exception subclass for Field
+	"""
 
 	def __init__(self, msg):
 		self.msg = msg
@@ -70,26 +37,39 @@ class Field(object):
 
 		"""
 
+		# The variable instance the field references
 		self.variable = variable
 
-		# As this is a base class, coordinate variables and ancil variables are empty
+
+		# Dictonaries, indexed by variable name of the coordinate variables and ancilary variables
+		# These dictionaries are index by name and contain tuples of dimension mappings and variable references
+
 		self.coordinate_variables = {}
+
 		self.ancil_variables = {}
 
 
-	# Get item just delagates to the upstream variable __getitem__
+
+	# Return an index based subset (view) of the field
 	def __getitem__(self, slices):
+
+		"""This just delegates to the underlying variable implementation of __getitem__"""
+
 		return self.variable[slices]
+
 
 
 	# Tries to find a coordinate with provided name and returns associated variable or None
 	def coordinate(self, name):
 
 		if name in self.coordinate_variables:
+
 			mapping, var  = self.coordinate_variables[name]
 			return var
+		
 		else:
 			return None
+
 
 	# Shape delegates to the upstream variable shape property
 	@property
@@ -463,86 +443,7 @@ class Field(object):
 		return result
 
 
-
-
-
-
-class CFField(Field):
-	
-	def __init__(self, variable):
-		"""A CF Field uses the CF conventions: http://cfconventions.org/ to deterine the coordinates associated
-		with a variable
-
-		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
-		>>> variable = ds.variables['rainf']
-		>>> print(variable)
-		<netCDFVariable: rainf [(u'time', 372), (u'latitude', 150), (u'longitude', 146)]>
-		>>> print(variable[100,70,80].ndarray())
-		[[[ 60.6825943]]]
-		>>> print(variable.attributes['units'])
-		mm/day
-		>>> f = CFField(variable)
-		>>> print(f.coordinate_variables)
-		{'latitude': ([1], <netCDFVariable: latitude [(u'latitude', 150)]>), 'longitude': ([2], <netCDFVariable: longitude [(u'longitude', 146)]>), 'time': ([0], <netCDFVariable: time [(u'time', 372)]>)}
-		>>> print(f.latitudes[:2,:2].ndarray())
-		[[-36.25 -36.25]
-		 [-35.75 -35.75]]
-		>>> print(f.longitudes[:2,:2].ndarray())
-		[[-20.25 -19.75]
-		 [-20.25 -19.75]]
-		>>> print(f.times[:5])
-		[datetime.datetime(1979, 1, 16, 0, 0) datetime.datetime(1979, 2, 14, 12, 0)
-		 datetime.datetime(1979, 3, 16, 0, 0) datetime.datetime(1979, 4, 15, 12, 0)
-		 datetime.datetime(1979, 5, 16, 0, 0)]
-		"""
-
-		super(CFField, self).__init__(variable)
-
-
-		if 'coordinates' in self.variable.attributes:
-			coordinates = self.variable.attributes['coordinates'].split()
-		else:
-			coordinates = []
-
-
-		for name, var in self.variable.dataset.variables.items():
-		#	print name, var, var.dimensions, self.variable.dimensions
-			# If we have units, check if they are coordinate units, if not coordinate_name will be None
-			if 'units' in var.attributes:
-				coordinate_name = self.units_match(var.attributes['units'])
-			else:
-				coordinate_name = None
-
-			# This could be a coordinate/ancilary variable if:
-			# 1) Its in the coordinates attribute list
-			# 2) Its dimensions are a reduced subset of the variables dimensions
-			if (name in coordinates) or (set(var.dimensions).issubset(self.variable.dimensions) and len(var.dimensions) < len(self.variable.dimensions)):
-				
-				mapping = []
-				for dim in var.dimensions:
-					try:
-						mapping.append(self.variable.dimensions.index(dim))
-					except:
-						pass
-
-				if coordinate_name:
-					self.coordinate_variables[coordinate_name] = (mapping, var)
-				else:
-					self.ancil_variables[name] = (mapping, var)
-
-		#print "CFField: ", self.coordinate_variables
-
-
-	def units_match(self, units):
-
-		for expr, coordinate in cffield_unitsmap.items():
-			compiled = re.compile(expr)
-			if compiled.match(units):
-				return coordinate
-
-		return None
-
+		
 
 
 

@@ -136,12 +136,22 @@ class Variable(object):
 			if data.dtype != self.dtype:
 				raise Exception("supplied data Array has dtype {}, Variable definition has dtype {}".format(data.dtype, self.dtype))
 
-			self._data = data
+			# If storage of data is the same as storage for this variable then just assign
+			if type(data) == storage:
+
+				self._data = data
+
+			# If storage is different then we need to recreate the data using the requested storage
+			else:
+				self._data = storage(self.shape, dtype)
+				self._data[:] = data.ndarray()
+
 	
 		elif isinstance(data, np.ndarray) or isinstance(data, np.ma.MaskedArray):
 			self._data = storage(self.shape, dtype)
 			self._data[:] = data
 
+		# Fall back to just creating an empty storage container... 
 		else:
 			self._data = storage(self.shape, dtype)
 

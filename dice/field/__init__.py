@@ -1,2 +1,2 @@
 from field import Field
-from field import CFField
+from cffield import CFField

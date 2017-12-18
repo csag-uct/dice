@@ -7,8 +7,6 @@ from nparray import numpyArray
 
 
 
-
-
 class tiledArray(Array):
 	"""
 	An Array implemention that uses numpy arrays to store subsets/tiles of the full data
@@ -17,6 +15,7 @@ class tiledArray(Array):
 
 	tiles are managed through a dict
 	"""
+
 
 	def __init__(self, shape, dtype, tilespec=None, storage=numpyArray):
 		"""
@@ -111,8 +110,6 @@ class tiledArray(Array):
 		>>> a[0:16,0:20] = 42.0
 		>>> a[7,17]
 		[[ 42.]]
-
-		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5), storage=pgArray)
 		"""
 		
 		# Iterate through all tiles intersecting slices
@@ -249,7 +246,6 @@ class tiledArray(Array):
 			result[:] = tmp.mean(axis=axis)
 
 		return result
-
 
 
 
