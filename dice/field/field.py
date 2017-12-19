@@ -539,7 +539,7 @@ class Field(object):
 		>>> ds2, ff = f.apply(f.groupby('time', grouping.month), np.ma.sum)
 		>>> print(ds2.variables.keys())
 		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
-		
+
 		"""
 
 		# First check if we can get the coordinate variable
@@ -592,12 +592,15 @@ class Field(object):
 
 			# Extract the last coordinate value from the original coordinate variable for this group
 			variables[groups.coordinate][i] = coordinate_variable.ndarray()[group[mapping[0]]][-1]
-			
+
+			# Next group			
 			i += 1
 
 
+		# Create a new dataset
 		dataset = Dataset(dimensions, self.variable.dataset.attributes, variables)
 
+		# Return the dataset and a new field 
 		return dataset, self.__class__(variable)
 
 
