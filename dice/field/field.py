@@ -489,9 +489,9 @@ class Field(object):
 			raise FieldError("Can't find coordinate {} for groupby".format(coordinate))
 
 
-		# If coordinate is time then we need to apply CF conventions to get real times... this breaks our data model a bit :-0
+		# If coordinate is time then we specifically call the time method
 		if coordinate == 'time':
-			coordinate_values = netCDF4.num2date(coordinate_variable[:].ndarray(), coordinate_variable.attributes['units'])
+			coordinate_values = self.times
 
 		else:
 			coordinate_values = coordinate_variable[:]
@@ -533,11 +533,13 @@ class Field(object):
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
-
-		>>> ds, ff = f.apply(f.groupby('time', grouping.year), np.ma.sum)
 		>>> print(ds.variables.keys())
-		[u'pr', u'name', 'vertical', 'longitude', 'time', 'latitude', u'id']
-
+		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
+		
+		>>> ds2, ff = f.apply(f.groupby('time', grouping.month), np.ma.sum)
+		>>> print(ds2.variables.keys())
+		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
+		
 		"""
 
 		# First check if we can get the coordinate variable
@@ -563,10 +565,10 @@ class Field(object):
 		for name, var in self.coordinate_variables.items():
 
 			if name == groups.coordinate:
-				variables[name] = Variable([dimensions[mapping[0]]], var[1].dtype, attributes=var[1].attributes)
+				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, attributes=var[1].attributes)
 
 			else:
-				variables[name] = var[1]
+				variables[var[1].name] = var[1]
 
 
 		# Reference the ancilary variables in the same way
@@ -589,7 +591,7 @@ class Field(object):
 			variable[i] = func(self.variable[s].ndarray(), axis=mapping[0])
 
 			# Extract the last coordinate value from the original coordinate variable for this group
-			variables[groups.coordinate][i] = coordinate_variable.ndarray()[group[mapping[0]].stop - 1]
+			variables[groups.coordinate][i] = coordinate_variable.ndarray()[group[mapping[0]]][-1]
 			
 			i += 1
 

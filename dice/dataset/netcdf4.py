@@ -136,6 +136,11 @@ class netCDF4Dataset(Dataset):
 				dims = tuple([d.name for d in var.dimensions])
 				ncvar = self._ds.createVariable(name, var.dtype, dims, fill_value=False)
 				ncvar[:] = var.ndarray()
+
+				# Write variable attributes
+				for key, value in var.attributes.items():
+					ncvar.setncattr(key, value)
+
 				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
 
 
