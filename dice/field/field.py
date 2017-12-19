@@ -147,7 +147,7 @@ class Field(object):
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
 		>>> from dice.field import CFField
 
-		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
@@ -158,7 +158,7 @@ class Field(object):
 		>>> print f.longitudes[s[1], s[2]].ndarray()
 		[[ 18.25]]
 
-		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
@@ -169,7 +169,7 @@ class Field(object):
 		>>> print f.longitudes[s[1], s[2]].ndarray()
 		[[ 18.48]]
 
-		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		
@@ -264,7 +264,7 @@ class Field(object):
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
 		>>> from dice.field import CFField
 
-		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 
@@ -274,7 +274,7 @@ class Field(object):
 		>>> print(s.longitudes.ndarray().min(), s.longitudes.ndarray().max())
 		(23.554399, 29.983801)
 
-		>>> ds = netCDF4Dataset('dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> s = f.subset(latitude=(-30,-20), longitude=(20,25), vertical=(1000,))
@@ -364,7 +364,7 @@ class Field(object):
 			variables[map_var[1].name] = map_var[1][ancil_slice]
 
 
-		dataset = Dataset(variable.dimensions, self.variable.dataset.attributes, variables)
+		dataset = Dataset(dimensions=variable.dimensions, attributes=self.variable.dataset.attributes, variables=variables)
 
 		result = self.__class__(variable)
 
@@ -383,13 +383,13 @@ class Field(object):
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
 		>>> from dice.field import CFField
 
-		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> features = f.features()
 		>>> print(features['features'][0]['properties'])
 		{u'name': u'BOSCHRAND', u'id': u'0585409_W'}
-		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
 		>>> features = f.features()
@@ -471,7 +471,7 @@ class Field(object):
 		>>> from dice.field import CFField
 		>>> import numpy as np
 
-		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 
@@ -530,7 +530,7 @@ class Field(object):
 		>>> from dice.field import CFField
 		>>> import numpy as np
 
-		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> print(ds.variables.keys())
@@ -598,7 +598,7 @@ class Field(object):
 
 
 		# Create a new dataset
-		dataset = Dataset(dimensions, self.variable.dataset.attributes, variables)
+		dataset = Dataset(dimensions=dimensions, attributes=self.variable.dataset.attributes, variables=variables)
 
 		# Return the dataset and a new field 
 		return dataset, self.__class__(variable)

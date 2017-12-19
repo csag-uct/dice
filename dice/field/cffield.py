@@ -51,7 +51,7 @@ class CFField(Field):
 		with a variable
 
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> ds = netCDF4Dataset('dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> ds = netCDF4Dataset(uri='dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> print(variable)
 		<netCDFVariable: rainf [(u'time', 372), (u'latitude', 150), (u'longitude', 146)]>
@@ -60,14 +60,18 @@ class CFField(Field):
 		>>> print(variable.attributes['units'])
 		mm/day
 		>>> f = CFField(variable)
+
 		>>> print(f.coordinate_variables)
 		{'latitude': ([1], <netCDFVariable: latitude [(u'latitude', 150)]>), 'longitude': ([2], <netCDFVariable: longitude [(u'longitude', 146)]>), 'time': ([0], <netCDFVariable: time [(u'time', 372)]>)}
+		
 		>>> print(f.latitudes[:2,:2].ndarray())
 		[[-36.25 -36.25]
 		 [-35.75 -35.75]]
+		
 		>>> print(f.longitudes[:2,:2].ndarray())
 		[[-20.25 -19.75]
 		 [-20.25 -19.75]]
+		
 		>>> print(f.times[:5])
 		[datetime.datetime(1979, 1, 16, 0, 0) datetime.datetime(1979, 2, 14, 12, 0)
 		 datetime.datetime(1979, 3, 16, 0, 0) datetime.datetime(1979, 4, 15, 12, 0)

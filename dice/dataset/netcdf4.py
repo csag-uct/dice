@@ -64,9 +64,9 @@ class netCDF4Dataset(Dataset):
 	A netCDF dataset implementation using the netCDF4 python module
 	"""
 
-	def __init__(self, filename, dataset=None, mode='r'):
+	def __init__(self, uri=None, dataset=None, dimensions=(), attributes={}, variables={}):
 		"""
-		>>> ds = netCDF4Dataset('dice/testing/test.nc', Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, attributes={'name':'test'})}, attributes={'test':'true'}))
+		>>> ds = netCDF4Dataset(uri='dice/testing/test.nc', dataset=Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, attributes={'name':'test'})}, attributes={'test':'true'}))
 		>>> print(ds.dimensions)
 		[<Dimension: x (5) >, <Dimension: y (3) >]
 		>>> print(ds.attributes)
@@ -77,52 +77,41 @@ class netCDF4Dataset(Dataset):
 		>>> print(ds.variables['test1'][0,0].ndarray())
 		[[ 42.]]
 		>>> ds.close()
-		>>> ds = netCDF4Dataset('dice/testing/test.nc')
+
+		>>> ds = netCDF4Dataset(uri='dice/testing/test.nc')
 		>>> print(ds.attributes)
 		{u'test': u'true'}
 		>>> print(ds.variables['test1'][0,0].ndarray())
 		[[ 42.]]
 		"""
 
+		# uri cannot be None, otherwise we have no-where to store this dataset
+		if not uri:
+			raise DatasetError("netCDF4Dataset must have a URI parameter pointing to a valid filename")
+
+
 		self._dimensions = []
 		self._attributes = {}
 		self._variables = {}
 
+		# Dataset argument supercedes dimensions, attributes and variables
+		if dataset:
 
-		# If there is no Dataset instance provided then assume we are opening an existing dataset
-		if not dataset:
+			dimensions = dataset.dimensions
+			attributes = dataset.attributes
+			variables = dataset.variables
+	
+
+		# At a minimum we need a list of dimensions to create a dataset
+		if dimensions:
+
 			try:
-				self._ds = netCDF4.Dataset(filename, mode=mode)
+				self._ds = netCDF4.Dataset(uri, mode='w')
 			except:
-				raise DatasetError("Can't open dataset {}".format(filename))
-
-			for name, dim in self._ds.dimensions.items():
-				self._dimensions.append(Dimension(name, dim.size))
-
-			for name in self._ds.ncattrs():
-				self._attributes[name] = self._ds.getncattr(name)
-
-			for varname, var in self._ds.variables.items():
-
-				dims = []
-				for name in var.dimensions:
-					for dim in self._dimensions:
-						if dim.name == name:
-							dims.append(dim)
-
-
-				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
-				self._variables[varname] = netCDFVariable(dims, var.datatype, varname, attrs, data=netCDF4Array(var), dataset=self)
-
-		# Otherwise we are creating a new dataset based on the Dataset instance
-		else:
-			try:
-				self._ds = netCDF4.Dataset(filename, mode='w')
-			except:
-				raise DatasetError("Can't open dataset {} for writing".format(filename))
+				raise DatasetError("Can't open dataset {} for writing".format(uri))
 
 			# Create the dimensions
-			for d in dataset.dimensions:
+			for d in dimensions:
 				self._ds.createDimension(d.name, d.size)
 				self._dimensions.append(Dimension(d.name, d.size))
 
@@ -142,6 +131,33 @@ class netCDF4Dataset(Dataset):
 					ncvar.setncattr(key, value)
 
 				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
+			
+
+		# If we dont' have an existing Dataset instance or a list of dimensions we must be opening an existing uri
+		else:
+			try:
+				self._ds = netCDF4.Dataset(uri, mode='r')
+			except:
+				raise DatasetError("Can't open dataset {}".format(uri))
+
+			for name, dim in self._ds.dimensions.items():
+				self._dimensions.append(Dimension(name, dim.size))
+
+			for name in self._ds.ncattrs():
+				self._attributes[name] = self._ds.getncattr(name)
+
+			for varname, var in self._ds.variables.items():
+
+				dims = []
+				for name in var.dimensions:
+					for dim in self._dimensions:
+						if dim.name == name:
+							dims.append(dim)
+
+
+				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
+				self._variables[varname] = netCDFVariable(dims, var.datatype, varname, attrs, data=netCDF4Array(var), dataset=self)
+
 
 
 	def makefield(self):
