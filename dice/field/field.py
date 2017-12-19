@@ -1,7 +1,11 @@
 import re
+import copy
 
-from dice.variable import Variable
+from dice.array import numpyArray
+from dice.variable import Variable, Dimension
 from dice.dataset import Dataset
+
+import grouping
 
 import numpy as np
 import netCDF4
@@ -21,6 +25,14 @@ class FieldError(Exception):
 
 	def __repr__(self):
 		return self.msg
+
+
+class GroupBy(object):
+
+	def __init__(self, coordinate, groups):
+
+		self.coordinate = coordinate
+		self.groups = groups
 
 
 
@@ -77,7 +89,7 @@ class Field(object):
 		return self.variable.shape
 
 
-	# Return lattitude coordinate Variable instance, but try to broadcast to 2D if possible
+	# Return latitude coordinate Variable instance, but try to broadcast to 2D if possible
 	@property
 	def latitudes(self):
 
@@ -452,15 +464,146 @@ class Field(object):
 	def groupby(self, coordinate, func):
 
 		"""
-		Generate groups (subsets) across the specified coordinate using the grouping function func
+		Generate groups (subsets) across the specified coordinate using the grouping function func.  Returns a GroupBy 
+		instance which captures the coordinate name and a dictionary of slices indexed by the group index.
 
 		>>> from dice.dataset.netcdf4 import netCDF4Dataset
 		>>> from dice.field import CFField
+		>>> import numpy as np
+
 		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 
+		>>> groups = f.groupby('time', grouping.yearmonth)
+		>>> print(groups.coordinate, len(groups.groups))
+		('time', 672)
+
 		"""
+
+		# Find the coordinate mapping for the request coordinate, if it exists
+		if coordinate in self.coordinate_variables:
+			mapping, coordinate_variable = self.coordinate_variables[coordinate]
+
+		else:
+			raise FieldError("Can't find coordinate {} for groupby".format(coordinate))
+
+
+		# If coordinate is time then we need to apply CF conventions to get real times... this breaks our data model a bit :-0
+		if coordinate == 'time':
+			coordinate_values = netCDF4.num2date(coordinate_variable[:].ndarray(), coordinate_variable.attributes['units'])
+
+		else:
+			coordinate_values = coordinate_variable[:]
+
+
+		# Apply grouping function to coordinate values
+		groups = func(coordinate_values)
+		
+
+		# We are going to need to construct slices on the original field
+		s = [slice(None)] * len(self.shape)
+		
+		# Process each group
+		for key, group in groups.items():
+
+			# Try and simplify sequence to a range
+			if (group[-1] - group[0] + 1) == len(group):
+				groups[key] = slice(group[0], group[-1]+1)
+
+			# Currenly this only works for single dimension mapping!
+			s[mapping[0]] = groups[key]
+
+			# Save the slices for this group
+			groups[key] = copy.copy(s)
+
+
+		return GroupBy(coordinate, groups)
+
+
+
+	def apply(self, groups, func):
+		"""
+		Apply the func func(ndarray, axis=0) to each group and construct a new dataset and field as a result
+
+		>>> from dice.dataset.netcdf4 import netCDF4Dataset
+		>>> from dice.field import CFField
+		>>> import numpy as np
+
+		>>> ds = netCDF4Dataset('dice/testing/south_africa_1960-2015.pr.nc')
+		>>> variable = ds.variables['pr']
+		>>> f = CFField(variable)
+
+		>>> ds, ff = f.apply(f.groupby('time', grouping.year), np.ma.sum)
+		>>> print(ds.variables.keys())
+		[u'pr', u'name', 'vertical', 'longitude', 'time', 'latitude', u'id']
+
+		"""
+
+		# First check if we can get the coordinate variable
+		if groups.coordinate in self.coordinate_variables:
+			mapping, coordinate_variable = self.coordinate_variables[groups.coordinate]
+
+		else:
+			raise FieldError("Can't find coordinate {} in field for groupby method".format(groups.coordinate))
+
+		
+		# The new variable with have the same dimensions except for the grouping coordinate which is replaced
+		# by the group size
+
+		dimensions = list(self.variable.dimensions)
+		dimensions[mapping[0]] = Dimension(self.variable.dimensions[mapping[0]].name, len(groups.groups))
+
+		# Create the variable using numpy storage for now
+		variable = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
+		variables = {self.variable.name: variable}
+
+		# Now we create the coordinate variables which are just references to the existing coordinate
+		# variables except for the grouping coordinate which needs to be a new variable
+		for name, var in self.coordinate_variables.items():
+
+			if name == groups.coordinate:
+				variables[name] = Variable([dimensions[mapping[0]]], var[1].dtype, attributes=var[1].attributes)
+
+			else:
+				variables[name] = var[1]
+
+
+		# Reference the ancilary variables in the same way
+		for name, var in self.ancil_variables.items():
+			variables[name] = var[1]
+
+
+		# Now we actually iterate through the groups applying the function and writing results to the
+		# the new variable and coordinate values to the new coordinate variable
+		
+		s = [slice(None)] * len(dimensions)
+
+		i = 0
+		for key, group in groups.groups.items():
+
+			# Set the slice
+			s[mapping[0]] = i
+
+			# Apply the funcion and assign to the new variable
+			variable[i] = func(self.variable[s].ndarray(), axis=mapping[0])
+
+			# Extract the last coordinate value from the original coordinate variable for this group
+			variables[groups.coordinate][i] = coordinate_variable.ndarray()[group[mapping[0]].stop - 1]
+			
+			i += 1
+
+
+		dataset = Dataset(dimensions, self.variable.dataset.attributes, variables)
+
+		return dataset, self.__class__(variable)
+
+
+
+
+
+
+
 
 
 
