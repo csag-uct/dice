@@ -1,5 +1,7 @@
 import re
 
+import netCDF4
+
 from field import Field
 
 
@@ -118,4 +120,8 @@ class CFField(Field):
 
 		return None
 
+
+	@property
+	def times(self):
+		return netCDF4.num2date(self.coordinate('time').ndarray(), self.coordinate('time').attributes['units'])
 

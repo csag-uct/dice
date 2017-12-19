@@ -133,7 +133,7 @@ class Field(object):
 
 	@property
 	def times(self):
-		return netCDF4.num2date(self.coordinate('time').ndarray(), self.coordinate('time').attributes['units'])
+		return self.coordinate('time').ndarray()
 
 
 	@property
