@@ -1,8 +1,8 @@
 import netCDF4
 
-from dice.array import Array
-from dice.array import reslice
-from dice.variable import Dimension, Variable
+from ddice.array import Array
+from ddice.array import reslice
+from ddice.variable import Dimension, Variable
 
 from dataset import Dataset
 from dataset import DatasetError
@@ -66,7 +66,7 @@ class netCDF4Dataset(Dataset):
 
 	def __init__(self, uri=None, dataset=None, dimensions=(), attributes={}, variables={}):
 		"""
-		>>> ds = netCDF4Dataset(uri='dice/testing/test.nc', dataset=Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, attributes={'name':'test'})}, attributes={'test':'true'}))
+		>>> ds = netCDF4Dataset(uri='ddice/testing/test.nc', dataset=Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, attributes={'name':'test'})}, attributes={'test':'true'}))
 		>>> print(ds.dimensions)
 		[<Dimension: x (5) >, <Dimension: y (3) >]
 		>>> print(ds.attributes)
@@ -78,7 +78,7 @@ class netCDF4Dataset(Dataset):
 		[[ 42.]]
 		>>> ds.close()
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/test.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/test.nc')
 		>>> print(ds.attributes)
 		{u'test': u'true'}
 		>>> print(ds.variables['test1'][0,0].ndarray())

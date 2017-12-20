@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import re
 
-from dice.variable import Variable, Dimension
+from ddice.variable import Variable, Dimension
 
 import netCDF4
 

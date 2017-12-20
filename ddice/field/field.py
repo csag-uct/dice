@@ -1,9 +1,9 @@
 import re
 import copy
 
-from dice.array import numpyArray
-from dice.variable import Variable, Dimension
-from dice.dataset import Dataset
+from ddice.array import numpyArray
+from ddice.variable import Variable, Dimension
+from ddice.dataset import Dataset
 
 import grouping
 
@@ -144,10 +144,10 @@ class Field(object):
 	def map(self, **kwargs):
 		"""Maps from world coordinates to array indices
 
-		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> from dice.field import CFField
+		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
+		>>> from ddice.field import CFField
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
@@ -158,7 +158,7 @@ class Field(object):
 		>>> print f.longitudes[s[1], s[2]].ndarray()
 		[[ 18.25]]
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
@@ -169,7 +169,7 @@ class Field(object):
 		>>> print f.longitudes[s[1], s[2]].ndarray()
 		[[ 18.48]]
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		
@@ -261,10 +261,10 @@ class Field(object):
 		subsetted coordinate and ancilary variables.  Subsetting is lazy (applies slices to original variable
 		arrays) so this is a cheap operation.
 
-		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> from dice.field import CFField
+		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
+		>>> from ddice.field import CFField
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 
@@ -274,7 +274,7 @@ class Field(object):
 		>>> print(s.longitudes.ndarray().min(), s.longitudes.ndarray().max())
 		(23.554399, 29.983801)
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/pr_AFR-44_ECMWF-ERAINT_evaluation_r1i1p1_SMHI-RCA4_v1_day_19800101-19801231.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> s = f.subset(latitude=(-30,-20), longitude=(20,25), vertical=(1000,))
@@ -380,16 +380,16 @@ class Field(object):
 
 		The timestamp parameter can be one of None, 'last', 'range'
 
-		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> from dice.field import CFField
+		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
+		>>> from ddice.field import CFField
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> features = f.features()
 		>>> print(features['features'][0]['properties'])
 		{u'name': u'BOSCHRAND', u'id': u'0585409_W'}
-		>>> ds = netCDF4Dataset(uri='dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
 		>>> features = f.features()
@@ -467,11 +467,11 @@ class Field(object):
 		Generate groups (subsets) across the specified coordinate using the grouping function func.  Returns a GroupBy 
 		instance which captures the coordinate name and a dictionary of slices indexed by the group index.
 
-		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> from dice.field import CFField
+		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
+		>>> from ddice.field import CFField
 		>>> import numpy as np
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 
@@ -526,11 +526,11 @@ class Field(object):
 		"""
 		Apply the func func(ndarray, axis=0) to each group and construct a new dataset and field as a result
 
-		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> from dice.field import CFField
+		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
+		>>> from ddice.field import CFField
 		>>> import numpy as np
 
-		>>> ds = netCDF4Dataset(uri='dice/testing/south_africa_1960-2015.pr.nc')
+		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 		>>> print(ds.variables.keys())

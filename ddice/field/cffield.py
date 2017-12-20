@@ -50,8 +50,8 @@ class CFField(Field):
 		"""A CF Field uses the CF conventions: http://cfconventions.org/ to deterine the coordinates associated
 		with a variable
 
-		>>> from dice.dataset.netcdf4 import netCDF4Dataset
-		>>> ds = netCDF4Dataset(uri='dice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
+		>>> ds = netCDF4Dataset(uri='ddice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> print(variable)
 		<netCDFVariable: rainf [(u'time', 372), (u'latitude', 150), (u'longitude', 146)]>

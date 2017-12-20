@@ -4,8 +4,8 @@ from copy import copy
 
 import numpy as np
 
-from dice.array import Array
-from dice.array import numpyArray
+from ddice.array import Array
+from ddice.array import numpyArray
 
 
 class Dimension(object):
