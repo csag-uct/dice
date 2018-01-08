@@ -1,5 +1,7 @@
 import re
 import copy
+from functools import partial
+
 
 from ddice.array import numpyArray
 from ddice.variable import Variable, Dimension
@@ -9,8 +11,14 @@ import grouping
 
 import numpy as np
 import netCDF4
+import pyproj
+
+from shapely.geometry import Point, Polygon, MultiPolygon
+import shapely.ops
 
 import json
+
+import matplotlib.pyplot as plt
 
 
 
@@ -29,10 +37,11 @@ class FieldError(Exception):
 
 class GroupBy(object):
 
-	def __init__(self, coordinate, groups):
+	def __init__(self, coordinate, groups, weights=[]):
 
 		self.coordinate = coordinate
 		self.groups = groups
+		self.weights = weights
 
 
 
@@ -55,10 +64,13 @@ class Field(object):
 
 		# Dictonaries, indexed by variable name of the coordinate variables and ancilary variables
 		# These dictionaries are index by name and contain tuples of dimension mappings and variable references
-
 		self.coordinate_variables = {}
-
 		self.ancil_variables = {}
+
+		# Geometries, areas and features are lazy computed and cached here
+		self._geometries = False
+		self._features = False
+		self._areas = False
 
 
 
@@ -371,7 +383,140 @@ class Field(object):
 		return result
 
 
-	def features(self, values=None):
+	def geometries(self):
+		"""
+		Return an array the same shape as the latitudes/longitude coordinates where each element is a shapely Geometry instance
+		
+		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
+		>>> from ddice.field import CFField
+
+		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
+		>>> variable = ds.variables['pr']
+		>>> f = CFField(variable) 
+		>>> print(f.geometries()[0].z)
+		1120.0
+
+		>>> ds = netCDF4Dataset(uri='ddice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> variable = ds.variables['rainf']
+		>>> f = CFField(variable)
+		>>> print(f.geometries()[0,0].bounds)
+		(-20.5, -36.5, -20.0, -36.0)
+		>>> print(f.geometries()[-1,-1].bounds)
+		(52.0, 38.0, 52.5, 38.5)
+
+		"""
+
+		# Cache this!
+		if not isinstance(self._geometries, bool):
+			return self._geometries
+
+
+
+		latitudes = self.latitudes.ndarray()
+		longitudes = self.longitudes.ndarray()
+
+		if 'vertical' in self.coordinate_variables:
+			vertical = self.coordinate('vertical').ndarray()
+			have_vertical = True
+
+		else:
+			have_vertical = False
+
+
+		result = np.ndarray(latitudes.shape, dtype=object)
+
+		# Discrete point geometries
+		if len(result.shape) == 1:
+
+			if have_vertical:
+				locations = zip(list(longitudes), list(latitudes), list(vertical))
+
+			else:
+				locations = zip(list(longitudes), list(latitudes))
+
+
+			result[:] = map(lambda loc: Point(*loc), locations)
+
+
+		# Rectangular grid
+		elif len(result.shape) == 2:
+		
+			latitude_bounds = np.ndarray((result.shape[0] + 1, result.shape[1] + 1), dtype='f16')
+			longitude_bounds = np.ndarray((result.shape[0] + 1, result.shape[1] + 1), dtype='f16')
+
+			latitude_bounds[1:-1,1:-1] = (latitudes[0:-1, 0:-1] + latitudes[1:,1:])/2
+			longitude_bounds[1:-1,1:-1] = (longitudes[0:-1, 0:-1] + longitudes[1:,1:])/2
+
+			for var in (latitude_bounds, longitude_bounds):
+
+				var[0,1:-1] = var[1,1:-1] - (var[2,1:-1] - var[1,1:-1])
+				var[-1,1:-1] = var[-2,1:-1] + (var[-2,1:-1] - var[-3,1:-1])
+
+				var[:,0] = var[:,1] - (var[:,2] - var[:,1])
+				var[:,-1] = var[:,-2] + (var[:,-2] - var[:,-3])
+
+
+			for index in np.ndindex(result.shape):
+
+				coords = []
+
+				for sub_index in [[0,0], [1,0], [1,1], [0,1], [0,0]]:
+					coords.append((longitude_bounds[tuple(np.array(index) + np.array(sub_index))], latitude_bounds[tuple(np.array(index) + np.array(sub_index))]))
+				
+				result[index] = Polygon(coords)
+
+
+		# Cache this!
+		self._geometries = result
+
+		return self._geometries
+
+
+	def areas(self):
+		"""
+		Return an array the same shape as the latitude/longitude variables containing the area in km^2 of each feature
+
+		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
+		>>> from ddice.field import CFField
+
+		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
+		>>> variable = ds.variables['pr']
+		>>> f = CFField(variable) 
+		>>> print(f.areas())
+		[ 0.  0.  0. ...,  0.  0.  0.]
+		
+		>>> ds = netCDF4Dataset(uri='ddice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
+		>>> variable = ds.variables['rainf']
+		>>> f = CFField(variable)
+		>>> print(f.areas().mean())
+		2866.5258464
+		
+		"""
+
+		# Cache this!
+		if not isinstance(self._areas, bool):
+			return self._areas
+
+		geometries = self.geometries()
+
+
+#		project = partial(
+#		    pyproj.transform,
+#		    pyproj.Proj(init='epsg:4326'),
+#		    pyproj.Proj(proj='aea', lat1=))
+
+		proj_from = pyproj.Proj(init='epsg:4326')
+
+		calc_areas = np.vectorize(lambda f: shapely.ops.transform(partial(pyproj.transform, proj_from, pyproj.Proj(proj='aea', lat1=f.bounds[1], lat2=f.bounds[3])), f).area)
+
+		self._areas = calc_areas(geometries) / 1000000.0
+
+		return self._areas
+
+
+
+
+	def feature_collection(self, values=None):
 		"""Return a dict of features (GeoJSON structure) for this field.  For point datasets this will be a set of 
 		Point features, for gridded datasets this will be a set of simple Polygon features either inferred from the
 		grid point locations, or directly from the cell bounds attributes (not implemented yet)
@@ -386,13 +531,16 @@ class Field(object):
 		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
-		>>> features = f.features()
+
+		>>> features = f.feature_collection()
 		>>> print(features['features'][0]['properties'])
 		{u'name': u'BOSCHRAND', u'id': u'0585409_W'}
+
+
 		>>> ds = netCDF4Dataset(uri='ddice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
-		>>> features = f.features()
+		>>> features = f.feature_collection()
 		"""
 
 		# First we need to determine the type of grid we have.  If latitude and longitude are 1D and both
@@ -461,11 +609,13 @@ class Field(object):
 
 
 
-	def groupby(self, coordinate, func):
+	def groupby(self, coordinate, func, **args):
 
 		"""
 		Generate groups (subsets) across the specified coordinate using the grouping function func.  Returns a GroupBy 
-		instance which captures the coordinate name and a dictionary of slices indexed by the group index.
+		instance which captures the coordinate name and a dictionary of groups indexed by the group index.  Each group is
+		an array of size N where N is the dimensionality of the field and each element is either a 1D index array or a slice
+		instance.
 
 		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
 		>>> from ddice.field import CFField
@@ -479,11 +629,32 @@ class Field(object):
 		>>> print(groups.coordinate, len(groups.groups))
 		('time', 672)
 
+		>>> from shapely.geometry import shape
+		>>> from fiona import collection
+
+		>>> c = collection('ddice/testing/ne_110m_admin_0_countries.shp')
+		>>> target = [shape(feature['geometry']) for feature in c]
+		
+		>>> #groups = f.groupby('geometry', grouping.geometry, target=target)
+
 		"""
 
 		# Find the coordinate mapping for the request coordinate, if it exists
 		if coordinate in self.coordinate_variables:
 			mapping, coordinate_variable = self.coordinate_variables[coordinate]
+
+		
+		# Geometry mapping uses ordered union of latitude and longitude maps
+		elif coordinate == 'geometry':
+
+			if self.coordinate_variables['latitude'] == self.coordinate_variables['longitude'][0]:
+				mapping = self.coordinate_variables['latitude'][0]
+
+			else:
+				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
+
+			coordinate_variable = self.geometries()
+
 
 		else:
 			raise FieldError("Can't find coordinate {} for groupby".format(coordinate))
@@ -498,8 +669,9 @@ class Field(object):
 
 
 		# Apply grouping function to coordinate values
-		groups = func(coordinate_values)
-		
+		groups, weights = func(coordinate_values, **args)
+
+		#print(groups, weights)
 
 		# We are going to need to construct slices on the original field
 		s = [slice(None)] * len(self.shape)
@@ -507,22 +679,28 @@ class Field(object):
 		# Process each group
 		for key, group in groups.items():
 
-			# Try and simplify sequence to a range
-			if (group[-1] - group[0] + 1) == len(group):
-				groups[key] = slice(group[0], group[-1]+1)
+			for dim in mapping:
+				s[dim] = group[mapping.index(dim)]
 
-			# Currenly this only works for single dimension mapping!
-			s[mapping[0]] = groups[key]
+			#print('groupby1', key, mapping, group, s)
+
+			# Try and simplify continuous monotonic sequence to a slice
+			for dim in mapping:
+
+				if isinstance(s[dim], list) and (s[dim][-1] - s[dim][0] + 1) == len(s[dim]):
+					s[dim] = slice(s[dim][0], s[dim][-1] + 1)
+
 
 			# Save the slices for this group
 			groups[key] = copy.copy(s)
+			#print('groupby2', key, groups[key])
 
 
-		return GroupBy(coordinate, groups)
+		return GroupBy(coordinate, groups, weights)
 
 
 
-	def apply(self, groups, func):
+	def apply(self, groupby, func):
 		"""
 		Apply the func func(ndarray, axis=0) to each group and construct a new dataset and field as a result
 
@@ -536,25 +714,34 @@ class Field(object):
 		>>> print(ds.variables.keys())
 		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
 		
-		>>> ds2, ff = f.apply(f.groupby('time', grouping.month), np.ma.sum)
+		>>> ds2, ff = f.apply(f.groupby('time', grouping.yearmonth), np.ma.sum)
 		>>> print(ds2.variables.keys())
 		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
 
+		>>> print(ds2.dimensions)
+
+		>>> dsout = netCDF4Dataset(dataset=ds2, uri='ddice/testing/testout.nc')
+		>>> print(dsout)
+
 		"""
 
+
 		# First check if we can get the coordinate variable
-		if groups.coordinate in self.coordinate_variables:
-			mapping, coordinate_variable = self.coordinate_variables[groups.coordinate]
+		if groupby.coordinate in self.coordinate_variables:
+			mapping, coordinate_variable = self.coordinate_variables[groupby.coordinate]
 
 		else:
 			raise FieldError("Can't find coordinate {} in field for groupby method".format(groups.coordinate))
 
-		
+		# Currently can't apply on multi-dimensional coordinate variables
+		if len(mapping) > 1:
+			raise FieldError("Can't apply on multi-dimensional coordinate variables")
+
 		# The new variable with have the same dimensions except for the grouping coordinate which is replaced
 		# by the group size
 
 		dimensions = list(self.variable.dimensions)
-		dimensions[mapping[0]] = Dimension(self.variable.dimensions[mapping[0]].name, len(groups.groups))
+		dimensions[mapping[0]] = Dimension(self.variable.dimensions[mapping[0]].name, len(groupby.groups))
 
 		# Create the variable using numpy storage for now
 		variable = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
@@ -564,7 +751,7 @@ class Field(object):
 		# variables except for the grouping coordinate which needs to be a new variable
 		for name, var in self.coordinate_variables.items():
 
-			if name == groups.coordinate:
+			if name == groupby.coordinate:
 				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, attributes=var[1].attributes)
 
 			else:
@@ -579,19 +766,25 @@ class Field(object):
 		# Now we actually iterate through the groups applying the function and writing results to the
 		# the new variable and coordinate values to the new coordinate variable
 		
-		s = [slice(None)] * len(dimensions)
-
 		i = 0
-		for key, group in groups.groups.items():
-
-			# Set the slice
-			s[mapping[0]] = i
+		for key, group in groupby.groups.items():
+			#print(i, key, group)
+			
 
 			# Apply the funcion and assign to the new variable
-			variable[i] = func(self.variable[s].ndarray(), axis=mapping[0])
+			variable[i] = func(self.variable[group].ndarray(), axis=mapping[0])
+
+			#print(coordinate_variable[group[mapping[0]]])
 
 			# Extract the last coordinate value from the original coordinate variable for this group
-			variables[groups.coordinate][i] = coordinate_variable.ndarray()[group[mapping[0]]][-1]
+			if isinstance(group[mapping[0]], slice):
+				variables[groupby.coordinate][i] = coordinate_variable[group[mapping[0]].stop - 1].ndarray()
+
+
+			else:
+				variables[groupby.coordinate][i] = coordinate_variable[group[mapping[0]]][-1].ndarray()
+
+			#print(variables[groupby.coordinate][i].ndarray())
 
 			# Next group			
 			i += 1
