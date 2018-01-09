@@ -700,7 +700,7 @@ class Field(object):
 
 
 
-	def apply(self, groupby, func):
+	def apply(self, groupby, func, **kwargs):
 		"""
 		Apply the func func(ndarray, axis=0) to each group and construct a new dataset and field as a result
 
@@ -715,13 +715,8 @@ class Field(object):
 		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
 		
 		>>> ds2, ff = f.apply(f.groupby('time', grouping.yearmonth), np.ma.sum)
-		>>> print(ds2.variables.keys())
-		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
-
 		>>> print(ds2.dimensions)
-
-		>>> dsout = netCDF4Dataset(dataset=ds2, uri='ddice/testing/testout.nc')
-		>>> print(dsout)
+		[<Dimension: time (672) >, <Dimension: feature (2625) >]
 
 		"""
 
@@ -765,14 +760,13 @@ class Field(object):
 
 		# Now we actually iterate through the groups applying the function and writing results to the
 		# the new variable and coordinate values to the new coordinate variable
-		
 		i = 0
 		for key, group in groupby.groups.items():
 			#print(i, key, group)
 			
 
 			# Apply the funcion and assign to the new variable
-			variable[i] = func(self.variable[group].ndarray(), axis=mapping[0])
+			variable[i] = func(self.variable[group].ndarray(), axis=mapping[0], **kwargs)
 
 			#print(coordinate_variable[group[mapping[0]]])
 
