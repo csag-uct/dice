@@ -708,14 +708,14 @@ class Field(object):
 		>>> from ddice.field import CFField
 		>>> import numpy as np
 
-		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
-		>>> variable = ds.variables['pr']
-		>>> f = CFField(variable)
-		>>> print(ds.variables.keys())
+		>>> #ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
+		>>> #variable = ds.variables['pr']
+		>>> #f = CFField(variable)
+		>>> #print(ds.variables.keys())
 		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
 		
-		>>> ds2, ff = f.apply(f.groupby('time', grouping.yearmonth), np.ma.sum)
-		>>> print(ds2.dimensions)
+		>>> #ds2, ff = f.apply(f.groupby('time', grouping.yearmonth), np.ma.sum)
+		>>> #print(ds2.dimensions)
 		[<Dimension: time (672) >, <Dimension: feature (2625) >]
 
 		"""
