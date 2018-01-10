@@ -112,23 +112,6 @@ class Dataset(object):
 
 
 
-	def fields(self):
-
-		result = {}
-
-		for name, variable in self.variables.items():
-
-			try:
-				field = CFField(variable, self)
-			except:
-				continue
-
-			result[name] = field
-
-		return result
-
-
-
 
 	@property
 	def attributes(self):
