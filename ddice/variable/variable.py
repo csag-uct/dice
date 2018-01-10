@@ -84,8 +84,7 @@ class Variable(object):
 	A variable encapsulates an array with named dimensions and attributes
 	"""
 
-	def __init__(self, dimensions, dtype, name=None, attributes={}, dataset=None, data=None,
-	storage=numpyArray):
+	def __init__(self, dimensions, dtype, name=None, attributes={}, dataset=None, data=None, storage=numpyArray):
 		"""
 		Create a new variable instance.  The dimensions parameter must be a tuple consisting of either
 		instances of Dimension or 2-tuples of the form (name, size) or (name, size, fixed)
@@ -132,15 +131,13 @@ class Variable(object):
 		if isinstance(data, Array):
 
 			if data.shape != self.shape:
-				raise Exception("supplied data Array has shape {}, Variable definition has shape {}".
-								format(data.shape, self.shape))
+				raise Exception("supplied data Array has shape {}, Variable definition has shape {}".format(data.shape, self.shape))
 
 			if data.dtype != self.dtype:
-				raise Exception("supplied data Array has dtype {}, Variable definition has dtype {}".
-								format(data.dtype, self.dtype))
+				raise Exception("supplied data Array has dtype {}, Variable definition has dtype {}".format(data.dtype, self.dtype))
 
 			# If storage of data is the same as storage for this variable then just assign
-			if isinstance(data, storage.__class__):
+			if isinstance(data, storage):
 
 				self._data = data
 
