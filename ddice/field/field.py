@@ -51,7 +51,7 @@ class Field(object):
 		"""A field encapsulates a Variable with meta-data about associated coordinate variables either
 		explicitly defined or implicitely defined through conventions such as CF conventions.  It also attempts
 		to identify ancilary variables which are variables that associated with a data variable such as station names,
-		grid altitudes, etc.  
+		grid altitudes, etc.
 
 		This class should not be used directly because it doesn't implement any conventions and so does not
 		identify coordinate variables or ancilary variables.  A derived class like CFField should be used instead.
@@ -90,7 +90,7 @@ class Field(object):
 
 			mapping, var  = self.coordinate_variables[name]
 			return var
-		
+
 		else:
 			return None
 
@@ -110,13 +110,13 @@ class Field(object):
 
 		# If latitude and longitude map to different dimensions and we aren't already 2D
 		if cvs['latitude'][0][0] != cvs['longitude'][0][0] and len(latitudes.shape) == 1:
-		
+
 			longitudes = self.coordinate('longitude')
-		
+
 			latitudes2d = Variable([latitudes.dimensions[0], longitudes.dimensions[0]], latitudes.dtype)
 			latitudes2d[:] = np.broadcast_to(latitudes.ndarray().T, (longitudes.shape[0], latitudes.shape[0])).T
 			return latitudes2d
-		
+
 
 		# Otherwise we just return original array
 		else:
@@ -133,7 +133,7 @@ class Field(object):
 		if cvs['latitude'][0][0] != cvs['longitude'][0][0] and len(longitudes.shape) == 1:
 
 			latitudes = self.coordinate('latitude')
-			
+
 			longitudes2d = Variable([latitudes.dimensions[0], longitudes.dimensions[0]], latitudes.dtype)
 			longitudes2d[:] = np.broadcast_to(longitudes.ndarray().T, (latitudes.shape[0], longitudes.shape[0]))
 			return longitudes2d
@@ -184,7 +184,7 @@ class Field(object):
 		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
-		
+
 		>>> s = f.map(latitude=-34, longitude=18.5, _method='nearest_neighbour')
 		>>> print ds.variables['name'][:][s[1]].ndarray()
 		[u'KENILWORTH RACE COURSE ARS']
@@ -223,18 +223,18 @@ class Field(object):
 
 				# Now search the other coordinate variables for the same mapping (and same dtype just in case!)
 				for name, othermapping in self.coordinate_variables.items():
-					
+
 					# It needs to be in the arguments list, and have the same dimensions
 					if name in kwargs and name != arg and othermapping[0] == dims:
 						args[name] = othermapping
-			
+
 			# else check in ancilary variables
 			elif arg in self.ancil_variables:
 				mapping = self.ancil_variables[arg]
 				dims, ancil_var = mapping
 				shape = ancil_var.shape
 				args[arg] = mapping
-			
+
 			# Else just quietly ignore
 			else:
 				continue
@@ -243,7 +243,7 @@ class Field(object):
 			distance = np.zeros(shape)
 
 			for name, mapping in args.items():
-				
+
 				# There should be a better way to differentiate between numeric and string methods
 				try:
 					distance += np.power(mapping[1].ndarray() - float(kwargs[name]),2)
@@ -269,7 +269,7 @@ class Field(object):
 
 	def subset(self, **kwargs):
 		"""
-		Subsets a field and returns a new Dataset instance hosting the subsetted field as well as 
+		Subsets a field and returns a new Dataset instance hosting the subsetted field as well as
 		subsetted coordinate and ancilary variables.  Subsetting is lazy (applies slices to original variable
 		arrays) so this is a cheap operation.
 
@@ -343,13 +343,13 @@ class Field(object):
 			for i in range(0,len(nonzero)):
 				start, stop = nonzero[i].min(), nonzero[i].max()
 
-			 	# 1D mappings could be spare masks, rather than ranges
-			 	if len(nonzero) == 1:
-			 		if stop - start + 1 > nonzero[0].shape[0]:
-			 			subset[mapping[i]] = nonzero[0]
+				# 1D mappings could be spare masks, rather than ranges
+				if len(nonzero) == 1:
+					if stop - start + 1 > nonzero[0].shape[0]:
+						subset[mapping[i]] = nonzero[0]
 
 				# otherwise we construct a slice
-			 	else:
+				else:
 					subset[mapping[i]] = slice(start, stop+1)
 
 
@@ -358,7 +358,7 @@ class Field(object):
 
 		for coord_name, map_var in self.coordinate_variables.items():
 			coord_slice = []
-			
+
 			for d, s in zip(self.variable.dimensions, subset):
 				if d in map_var[1].dimensions:
 					coord_slice.append(s)
@@ -368,7 +368,7 @@ class Field(object):
 
 		for ancil_name, map_var in self.ancil_variables.items():
 			ancil_slice = []
-			
+
 			for d, s in zip(self.variable.dimensions, subset):
 				if d in map_var[1].dimensions:
 					ancil_slice.append(s)
@@ -386,13 +386,13 @@ class Field(object):
 	def geometries(self):
 		"""
 		Return an array the same shape as the latitudes/longitude coordinates where each element is a shapely Geometry instance
-		
+
 		>>> from ddice.dataset.netcdf4 import netCDF4Dataset
 		>>> from ddice.field import CFField
 
 		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
-		>>> f = CFField(variable) 
+		>>> f = CFField(variable)
 		>>> print(f.geometries()[0].z)
 		1120.0
 
@@ -440,7 +440,7 @@ class Field(object):
 
 		# Rectangular grid
 		elif len(result.shape) == 2:
-		
+
 			latitude_bounds = np.ndarray((result.shape[0] + 1, result.shape[1] + 1), dtype='f16')
 			longitude_bounds = np.ndarray((result.shape[0] + 1, result.shape[1] + 1), dtype='f16')
 
@@ -462,7 +462,7 @@ class Field(object):
 
 				for sub_index in [[0,0], [1,0], [1,1], [0,1], [0,0]]:
 					coords.append((longitude_bounds[tuple(np.array(index) + np.array(sub_index))], latitude_bounds[tuple(np.array(index) + np.array(sub_index))]))
-				
+
 				result[index] = Polygon(coords)
 
 
@@ -481,16 +481,16 @@ class Field(object):
 
 		>>> ds = netCDF4Dataset(uri='ddice/testing/south_africa_1960-2015.pr.nc')
 		>>> variable = ds.variables['pr']
-		>>> f = CFField(variable) 
+		>>> f = CFField(variable)
 		>>> print(f.areas())
 		[ 0.  0.  0. ...,  0.  0.  0.]
-		
+
 		>>> ds = netCDF4Dataset(uri='ddice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
 		>>> variable = ds.variables['rainf']
 		>>> f = CFField(variable)
 		>>> print(f.areas().mean())
 		2866.5258464
-		
+
 		"""
 
 		# Cache this!
@@ -500,10 +500,10 @@ class Field(object):
 		geometries = self.geometries()
 
 
-#		project = partial(
-#		    pyproj.transform,
-#		    pyproj.Proj(init='epsg:4326'),
-#		    pyproj.Proj(proj='aea', lat1=))
+#       project = partial(
+#           pyproj.transform,
+#           pyproj.Proj(init='epsg:4326'),
+#           pyproj.Proj(proj='aea', lat1=))
 
 		proj_from = pyproj.Proj(init='epsg:4326')
 
@@ -517,7 +517,7 @@ class Field(object):
 
 
 	def feature_collection(self, values=None):
-		"""Return a dict of features (GeoJSON structure) for this field.  For point datasets this will be a set of 
+		"""Return a dict of features (GeoJSON structure) for this field.  For point datasets this will be a set of
 		Point features, for gridded datasets this will be a set of simple Polygon features either inferred from the
 		grid point locations, or directly from the cell bounds attributes (not implemented yet)
 
@@ -612,7 +612,7 @@ class Field(object):
 	def groupby(self, coordinate, func, **args):
 
 		"""
-		Generate groups (subsets) across the specified coordinate using the grouping function func.  Returns a GroupBy 
+		Generate groups (subsets) across the specified coordinate using the grouping function func.  Returns a GroupBy
 		instance which captures the coordinate name and a dictionary of groups indexed by the group index.  Each group is
 		an array of size N where N is the dimensionality of the field and each element is either a 1D index array or a slice
 		instance.
@@ -634,7 +634,7 @@ class Field(object):
 
 		>>> c = collection('ddice/testing/ne_110m_admin_0_countries.shp')
 		>>> target = [shape(feature['geometry']) for feature in c]
-		
+
 		>>> #groups = f.groupby('geometry', grouping.geometry, target=target)
 
 		"""
@@ -643,7 +643,7 @@ class Field(object):
 		if coordinate in self.coordinate_variables:
 			mapping, coordinate_variable = self.coordinate_variables[coordinate]
 
-		
+
 		# Geometry mapping uses ordered union of latitude and longitude maps
 		elif coordinate == 'geometry':
 
@@ -675,7 +675,7 @@ class Field(object):
 
 		# We are going to need to construct slices on the original field
 		s = [slice(None)] * len(self.shape)
-		
+
 		# Process each group
 		for key, group in groups.items():
 
@@ -713,7 +713,7 @@ class Field(object):
 		>>> #f = CFField(variable)
 		>>> #print(ds.variables.keys())
 		[u'pr', u'elevation', u'name', u'longitude', u'time', u'latitude', u'id']
-		
+
 		>>> #ds2, ff = f.apply(f.groupby('time', grouping.yearmonth), np.ma.sum)
 		>>> #print(ds2.dimensions)
 		[<Dimension: time (672) >, <Dimension: feature (2625) >]
@@ -763,7 +763,7 @@ class Field(object):
 		i = 0
 		for key, group in groupby.groups.items():
 			#print(i, key, group)
-			
+
 
 			# Apply the funcion and assign to the new variable
 			variable[i] = func(self.variable[group].ndarray(), axis=mapping[0], **kwargs)
@@ -780,24 +780,12 @@ class Field(object):
 
 			#print(variables[groupby.coordinate][i].ndarray())
 
-			# Next group			
+			# Next group
 			i += 1
 
 
 		# Create a new dataset
 		dataset = Dataset(dimensions=dimensions, attributes=self.variable.dataset.attributes, variables=variables)
 
-		# Return the dataset and a new field 
+		# Return the dataset and a new field
 		return dataset, self.__class__(variable)
-
-
-
-
-
-
-
-
-
-
-
-

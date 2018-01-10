@@ -53,10 +53,9 @@ def geometry(source, target=None):
 	result = OrderedDict()
 
 	for i in range(len(target)):
-		
+
 		result[i] = [slice(None)] * len(source.shape)
 
 	print(result[0])
 
 	return result, None
-

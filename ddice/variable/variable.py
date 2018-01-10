@@ -11,8 +11,8 @@ from ddice.array import numpyArray
 class Dimension(object):
 	"""
 	A dimension defines the axis of a multi-dimensional variable.  It simply has a name
-	and a size.  A dimension can be fixed size (default) or not fixed size indicating whether 
-	the size can or cannot be changed after creation.  This is relevant to some array storage 
+	and a size.  A dimension can be fixed size (default) or not fixed size indicating whether
+	the size can or cannot be changed after creation.  This is relevant to some array storage
 	formats	that do not allow dimension sizes to change after creation
 	"""
 
@@ -46,7 +46,7 @@ class Dimension(object):
 
 	def __ne__(self, other):
 		return not self.__eq__(other)
-		
+
 
 	# At some point we might want to return a calculated value, so writing this as a property function
 	@property
@@ -57,8 +57,8 @@ class Dimension(object):
 	@size.setter
 	def size(self, size):
 		"""
-		Changes the size of a dimension. Raises an exception if the dimension is fixed.  Checks for positve
-		integer values
+		Changes the size of a dimension. Raises an exception if the dimension is fixed.  Checks for
+		positve integer values
 		"""
 
 		if self.fixed:
@@ -84,7 +84,8 @@ class Variable(object):
 	A variable encapsulates an array with named dimensions and attributes
 	"""
 
-	def __init__(self, dimensions, dtype, name=None, attributes={}, dataset=None, data=None, storage=numpyArray):
+	def __init__(self, dimensions, dtype, name=None, attributes={}, dataset=None, data=None,
+	storage=numpyArray):
 		"""
 		Create a new variable instance.  The dimensions parameter must be a tuple consisting of either
 		instances of Dimension or 2-tuples of the form (name, size) or (name, size, fixed)
@@ -111,7 +112,7 @@ class Variable(object):
 
 		# dimensions argument should be an iterable of Dimension instances or 2-tuples
 		# in the form (name, size)
-		for d in dimensions:			
+		for d in dimensions:
 
 			if type(d) == tuple:
 				self._dimensions.append(Dimension(*d))
@@ -125,19 +126,21 @@ class Variable(object):
 		# Dimensions are immutable so turn the list into a tuple
 		self._dimensions = tuple(self._dimensions)
 
-		# Handle passed data which must either be a corrected shaped and typed Array instance, or a correctly
-		# shaped and a castable typed ndarray or masked_array instance, or None, in which case a new empty Array instance of 
-		# subclass storage is instantiated
+		# Handle passed data which must either be a corrected shaped and typed Array instance, or
+		# a correctly shaped and a castable typed ndarray or masked_array instance, or None, in
+		# which case a new empty Array instance of subclass storage is instantiated
 		if isinstance(data, Array):
 
 			if data.shape != self.shape:
-				raise Exception("supplied data Array has shape {}, Variable definition has shape {}".format(data.shape, self.shape))
+				raise Exception("supplied data Array has shape {}, Variable definition has shape {}".
+								format(data.shape, self.shape))
 
 			if data.dtype != self.dtype:
-				raise Exception("supplied data Array has dtype {}, Variable definition has dtype {}".format(data.dtype, self.dtype))
+				raise Exception("supplied data Array has dtype {}, Variable definition has dtype {}".
+								format(data.dtype, self.dtype))
 
 			# If storage of data is the same as storage for this variable then just assign
-			if type(data) == storage:
+			if isinstance(data, storage.__class__):
 
 				self._data = data
 
@@ -146,12 +149,12 @@ class Variable(object):
 				self._data = storage(self.shape, dtype)
 				self._data[:] = data.ndarray()
 
-	
+
 		elif isinstance(data, np.ndarray) or isinstance(data, np.ma.MaskedArray):
 			self._data = storage(self.shape, dtype)
 			self._data[:] = data
 
-		# Fall back to just creating an empty storage container... 
+		# Fall back to just creating an empty storage container
 		else:
 			self._data = storage(self.shape, dtype)
 
@@ -166,7 +169,8 @@ class Variable(object):
 
 	def __repr__(self):
 		if self.name:
-			return "<{}: {} {}>".format(self.__class__.__name__, self.name, [(d.name, d.size) for d in self.dimensions])
+			return "<{}: {} {}>".format(self.__class__.__name__, self.name,
+				   [(d.name, d.size) for d in self.dimensions])
 		else:
 			return "<{}: {}>".format(self.__class__.__name__, [(d.name, d.size) for d in self.dimensions])
 
@@ -176,8 +180,8 @@ class Variable(object):
 		Return variable data as an numpy instance
 		"""
 		return self._data.ndarray()
-	
-	
+
+
 	def asjson(self, data=False):
 		return {'dimensions':[], 'dtype':repr(self.dtype), 'attributes':self.attributes.copy()}
 
@@ -216,4 +220,3 @@ class Variable(object):
 		result = self.__class__(dims, data.dtype, name=self.name, attributes=self.attributes, dataset=self.dataset, data=data)
 
 		return result
-

@@ -20,7 +20,7 @@ class Dataset(object):
 	A Dataset consists of global attributes, a set of shared dimensions, and a list variables
 	"""
 
-	
+
 	def __init__(self, uri=None, dataset=None, dimensions=(), attributes={}, variables={}):
 		"""
 		>>> ds = Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, attributes={'name':'test'})})
@@ -32,7 +32,7 @@ class Dataset(object):
 		>>> print(ds.variables['test1'][0,0])
 		<Variable: [('x', 1), ('y', 1)]>
 		"""
-	
+
 		self._dimensions = []
 		self._attributes = {}
 		self._variables = {}
@@ -45,8 +45,8 @@ class Dataset(object):
 			attributes = dataset.attributes
 			variables = dataset.variables
 
-	
-		# Process/check dimensions list/tuple		
+
+		# Process/check dimensions list/tuple
 		if type(dimensions) in (tuple, list):
 
 			for d in dimensions:
@@ -58,7 +58,7 @@ class Dataset(object):
 					self._dimensions.append(d)
 
 				else:
-					raise TypeError('{} is not a 2-tuple (name, size) or a Dimension instance'.format(d))			
+					raise TypeError('{} is not a 2-tuple (name, size) or a Dimension instance'.format(d))
 
 
 
@@ -77,7 +77,7 @@ class Dataset(object):
 
 				# Check all its dimensions to see if we have them already
 				for dimension in var._dimensions:
-		
+
 					# Get all the dimension names we already have
 					mynames = [d.name for d in self._dimensions]
 
@@ -108,7 +108,7 @@ class Dataset(object):
 			except:
 				pass
 
-		return DatasetError("Failed to open uri {} using any available Dataset implementation".format(uri))		
+		return DatasetError("Failed to open uri {} using any available Dataset implementation".format(uri))
 
 
 
@@ -141,7 +141,7 @@ class Dataset(object):
 	@property
 	def variables(self):
 		return self._variables
-		
+
 	def __repr__(self):
 		return "<{}: {} | {}>".format(self.__class__.__name__, repr(self.dimensions), repr(self.variables))
 
@@ -156,16 +156,3 @@ class Dataset(object):
 			result['variables'][name] = var.asjson(data=False)
 
 		return result
-
-
-
-
-
-
-
-
-
-
-
-
-

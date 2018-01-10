@@ -1,2 +1,6 @@
-import dataset
+"""
+Module ddice
+"""
+
+import ddice.dataset
 
