@@ -1,4 +1,5 @@
 import netCDF4
+import numpy as np
 
 from ddice.array import Array
 from ddice.array import reslice
@@ -17,7 +18,7 @@ class netCDF4Array(Array):
 		super(netCDF4Array, self).__init__(ncvar.shape, ncvar.datatype)
 		self._data = ncvar
 
-#	def __setitem__(self, slices, values):		
+#	def __setitem__(self, slices, values):
 #		self._ncvar[slices] = values
 
 	def __getitem__(self, slices):
@@ -26,7 +27,7 @@ class netCDF4Array(Array):
 
 		result = self.__class__(self._data)
 		result._view = view
-		
+
 		return result
 
 
@@ -39,7 +40,7 @@ class netCDFVariable(Variable, object):
 		"""
 		Just call the parent class constructor but force storage to be netCDF4Array
 		"""
-		
+
 		super(netCDFVariable, self).__init__(dimensions, dtype, name=name, attributes=attributes, dataset=dataset, data=data, storage=netCDF4Array)
 
 #	@property
@@ -100,7 +101,7 @@ class netCDF4Dataset(Dataset):
 			dimensions = dataset.dimensions
 			attributes = dataset.attributes
 			variables = dataset.variables
-	
+
 
 		# At a minimum we need a list of dimensions to create a dataset
 		if dimensions:
@@ -130,10 +131,14 @@ class netCDF4Dataset(Dataset):
 					ncvar.setncattr(key, value)
 
 				# Actually write the data array
-				ncvar[:] = var.ndarray()
+				if len(dims):
+					try:
+						ncvar[:] = var.ndarray()
+					except:
+						pass
 
 				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
-			
+
 
 		# If we dont' have an existing Dataset instance or a list of dimensions we must be opening an existing uri
 		else:
