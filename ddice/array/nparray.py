@@ -24,19 +24,19 @@ class numpyArray(Array):
 
 	def __setitem__(self, slices, values):
 		""" Set values from the specified slices of the array"""
-		
+
 		# Lazy allocation
 		if type(self._data) == bool:
-			self._data = np.empty(self.shape, dtype=self.dtype)
+			self._data = np.ma.empty(self.shape, dtype=self.dtype)
 
 		# Combine slices with the view to get data indices
 		shape, slices = reslice(self.shape, self._view, slices)
-		
+
 		self._data[slices] = values
 
 
 	def __getitem__(self, slices):
-		"""Implements array subsetting.  The method actually returns a new numpyArray instance that 
+		"""Implements array subsetting.  The method actually returns a new numpyArray instance that
 		references the original data but has modified subset slices
 		>>> a = numpyArray((3,5), dtype=np.float32)
 		>>> a[:] = 42
@@ -56,10 +56,10 @@ class numpyArray(Array):
 		shape, view = reslice(self.shape, self._view, slices)
 
 		result = self.__class__(shape, self.dtype)
-		
+
 		result._data = self._data
 		result._view = view
-		
+
 		return result
 
 
