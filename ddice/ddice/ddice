@@ -1,10 +1,93 @@
+#!/usr/bin/env python
 """
-dice.py implemets a command line interface to dice functionality
+A command line tool to calculate time and space aggregation statistics
 """
-import sys
+import numpy as np
 
-sys.path.append('/home/cjack/work/projects/code/dice')
+import argparse
 
-import dice.dataset
+from ddice.dataset.netcdf4 import netCDF4Dataset
+from ddice.field import CFField
+from ddice.field import grouping
 
-print(dice.dataset)
+parser = argparse.ArgumentParser(description='Time and space aggregation statistics')
+
+parser.add_argument('source', help='source data uri and fields in the form uri:fieldname1,fieldname2,..,fieldnameN')
+parser.add_argument('--target', '-t', required=True, help='target data uri')
+parser.add_argument('--groupby', '-g', help='groupby coordinate, function, and arguments using syntax: coordinate:function,arg1,arg2,..,argN')
+parser.add_argument('--apply', '-a', help='function(s) to apply to each group')
+parser.add_argument('--post', '-p', help='post processing function to apply')
+
+args = parser.parse_args()
+print(args)
+
+# Process source argument of the form uri:
+source_parts = args.source.split(':')
+
+if len(source_parts) > 1:
+	fieldfilter = set(source_parts[1].split(','))
+
+else:
+	fieldfilter = ''
+
+
+source = netCDF4Dataset(uri=source_parts[0])
+
+print('source dimensions: {}'.format(source.dimensions))
+print('source variables: {}'.format(source.variables.keys()))
+
+
+fieldselect = set(source.variables.keys())
+
+if fieldfilter:
+	fieldselect = list(fieldselect & fieldfilter)
+
+print('selected fields: {}'.format(fieldselect))
+
+field = CFField(source.variables[fieldselect[0]])
+
+
+
+# Try and get grouping function
+grouping_parts = args.groupby.split(':')
+grouping_coordinate = grouping_parts[0]
+
+try:
+	function_parts = grouping_parts[1].split(',')
+except:
+	raise Exception('grouping argument must specify both coordinate and grouping function name. eg: time:yearmonth')
+
+try:
+	groupby_function = eval('grouping.{}'.format(function_parts[0]))
+	groupby_args = function_parts[1:]
+except:
+	raise Exception('failed to identify grouping function: '.format(args.groupby))
+
+print('grouping function: {}({})'.format(groupby_function, groupby_args))
+
+
+# Index the groups
+groups = field.groupby(grouping_coordinate, groupby_function)
+
+print('{} groups ({}) indexed'.format(len(groups.groups), args.groupby))
+
+
+# Try and get the apply function
+try:
+	function = eval(args.apply)
+except:
+	raise Exception('Cannot find apply function: {}'.format(args.apply))
+
+ds, field = field.apply(groups, function)
+
+
+# Create the target dataset
+target = netCDF4Dataset(uri=args.target, dataset=ds)
+
+
+
+
+
+
+
+
