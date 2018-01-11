@@ -96,7 +96,6 @@ class CFField(Field):
 			else:
 				coordinate_name = None
 
-
 			# This could be a coordinate/ancilary variable if:
 			# 1) Its in the coordinates attribute list
 			# 2) Its dimensions are a reduced subset of the variables dimensions
@@ -135,7 +134,7 @@ class CFField(Field):
 		if 'calendar' in self.coordinate('time').attributes:
 			return netCDF4.num2date(self.coordinate('time').ndarray(),
 				                    self.coordinate('time').attributes['units'],
-				                    self.coordinate('time').attribtues['calendar'])
+				                    self.coordinate('time').attributes['calendar'])
 
 		else:
 			return netCDF4.num2date(self.coordinate('time').ndarray(),
