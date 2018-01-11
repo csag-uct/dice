@@ -21,7 +21,7 @@ import json
 
 import matplotlib.pyplot as plt
 
-
+import time as timing
 
 
 class FieldError(Exception):
@@ -745,8 +745,9 @@ class Field(object):
 		# variables except for the grouping coordinate which needs to be a new variable
 		for name, var in self.coordinate_variables.items():
 
+			print name, var, var[1].name
 			if name == groupby.coordinate:
-				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, attributes=var[1].attributes)
+				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, var[1].name, attributes=var[1].attributes)
 
 			else:
 				variables[var[1].name] = var[1]
@@ -763,7 +764,11 @@ class Field(object):
 		for key, group in groupby.groups.items():
 
 			# Apply the funcion and assign to the new variable
+			now = timing.time()
+
 			variable[i] = func(self.variable[group].ndarray(), axis=mapping[0], **kwargs)
+
+			print("{} took {} ms".format(key, (timing.time() - now)*1000))
 
 			#print(coordinate_variable[group[mapping[0]]])
 
@@ -771,9 +776,7 @@ class Field(object):
 			if isinstance(group[mapping[0]], slice):
 				variables[groupby.coordinate][i] = coordinate_variable[[group[mapping[0]].stop - 1]].ndarray()
 
-
 			else:
-				print(group[mapping[0]])
 				variables[groupby.coordinate][i] = coordinate_variable[[group[mapping[0]]]][-1].ndarray()
 
 			#print(variables[groupby.coordinate][i].ndarray())
