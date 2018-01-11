@@ -1,7 +1,7 @@
 import numpy as np
 
 def real_slices(shape, slices=()):
-	"""Turns a possibly truncated mixture of slices and integer indices into a full tuple with 
+	"""Turns a possibly truncated mixture of slices and integer indices into a full tuple with
 	the same length as dimensionality, of valid array indices (slice, integer, or iterable)
 	"""
 
@@ -22,7 +22,7 @@ def real_slices(shape, slices=()):
 		if isinstance(s, slice):
 
 			start, stop, step = s.start, s.stop, s.step
-			
+
 			if start == None:
 				start = 0
 			if stop == None:
@@ -44,7 +44,7 @@ def real_slices(shape, slices=()):
 
 
 def reslice(shape, slices, newslices):
-	"""Takes a list of slices (or integers or iterables), an array shape, and applies new slices to them to produce 
+	"""Takes a list of slices (or integers or iterables), an array shape, and applies new slices to them to produce
 	a list of modified slices.  Returns a tuple of (shape, slices) where shape is the newly calculated shape
 
 	>>> reslice((10,), (), (slice(3,-2),))
@@ -70,8 +70,9 @@ def reslice(shape, slices, newslices):
 		newslices = (newslices,)
 
 	for i in range(len(newslices)):
-		
-		s = slices[i]			
+
+		s = slices[i]
+
 		ns = newslices[i]
 
 		was = None
@@ -79,7 +80,7 @@ def reslice(shape, slices, newslices):
 		# Convert slice instances to arrays
 		if isinstance(s, slice):
 			was = slice
-			
+
 			start, stop, step = s.start, s.stop, s.step
 
 			if not start:
@@ -113,7 +114,7 @@ def reslice(shape, slices, newslices):
 		else:
 			newshape[i] = 1
 
-		
+
 		# Try and get back to the type of slice we had originally
 		if was == slice  and isinstance(ns, slice):
 			slices[i] = slice(s[0], s[-1]+1, ns.step)
@@ -123,7 +124,7 @@ def reslice(shape, slices, newslices):
 
 		elif isinstance(s, int):
 			slices[i] = slice(s,s+1,1)
-		
+
 		else:
 			slices[i] = s
 
