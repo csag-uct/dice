@@ -8,6 +8,7 @@ from ddice.variable import Variable, Dimension
 from ddice.dataset import Dataset
 
 import grouping
+import functions
 
 import numpy as np
 import netCDF4
@@ -24,15 +25,7 @@ import matplotlib.pyplot as plt
 
 
 class FieldError(Exception):
-	"""
-	Pretty generic Exception subclass for Field
-	"""
-
-	def __init__(self, msg):
-		self.msg = msg
-
-	def __repr__(self):
-		return self.msg
+	"""Raise a Field related Exception"""
 
 
 class GroupBy(object):
@@ -700,7 +693,7 @@ class Field(object):
 
 
 
-	def apply(self, groupby, func, **kwargs):
+	def apply(self, groupby, funcname, *args, **kwargs):
 		"""
 		Apply the func func(ndarray, axis=0) to each group and construct a new dataset and field as a result
 
@@ -719,6 +712,12 @@ class Field(object):
 		[<Dimension: time (672) >, <Dimension: feature (2625) >]
 
 		"""
+
+		# Check that the function is available
+		try:
+			func = eval('functions.{}'.format(funcname))
+		except:
+			raise Exception('Function {} is not available in functions module'.format(funcname))
 
 
 		# First check if we can get the coordinate variable
@@ -762,8 +761,6 @@ class Field(object):
 		# the new variable and coordinate values to the new coordinate variable
 		i = 0
 		for key, group in groupby.groups.items():
-			#print(i, key, group)
-
 
 			# Apply the funcion and assign to the new variable
 			variable[i] = func(self.variable[group].ndarray(), axis=mapping[0], **kwargs)
@@ -772,11 +769,12 @@ class Field(object):
 
 			# Extract the last coordinate value from the original coordinate variable for this group
 			if isinstance(group[mapping[0]], slice):
-				variables[groupby.coordinate][i] = coordinate_variable[group[mapping[0]].stop - 1].ndarray()
+				variables[groupby.coordinate][i] = coordinate_variable[[group[mapping[0]].stop - 1]].ndarray()
 
 
 			else:
-				variables[groupby.coordinate][i] = coordinate_variable[group[mapping[0]]][-1].ndarray()
+				print(group[mapping[0]])
+				variables[groupby.coordinate][i] = coordinate_variable[[group[mapping[0]]]][-1].ndarray()
 
 			#print(variables[groupby.coordinate][i].ndarray())
 
