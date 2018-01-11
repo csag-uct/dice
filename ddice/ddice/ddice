@@ -113,8 +113,22 @@ for opid in range(0, len(args.apply)):
 	ds, field = field.apply(groups, apply_parts[0], **apply_kwargs)
 
 
+target_parts = args.target.split(':')
+
+if len(target_parts) > 1:
+	target_varname_parts = target_parts[1].split(',')
+
+	ds.variables[target_varname_parts[0]] = field.variable
+
+	for expr in target_varname_parts[1:]:
+		key, value = expr.split('=')
+		ds.variables[target_varname_parts[0]].attributes[key] = value
+
+	del(ds.variables[field.variable.name])
+
+
 # Create the target dataset
-target = netCDF4Dataset(uri=args.target, dataset=ds)
+target = netCDF4Dataset(uri=target_parts[0], dataset=ds)
 
 
 
