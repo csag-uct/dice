@@ -9,6 +9,7 @@ import argparse
 from ddice.dataset.netcdf4 import netCDF4Dataset
 from ddice.field import CFField
 from ddice.field import grouping
+from ddice.field import functions
 
 parser = argparse.ArgumentParser(description='Time and space aggregation statistics')
 
@@ -41,19 +42,20 @@ fieldselect = set(source.variables.keys())
 
 if fieldfilter:
 	fieldselect = list(fieldselect & fieldfilter)
+else:
+	fieldselect = list(fieldselect)
 
 print('selected fields: {}'.format(fieldselect))
 
 field = CFField(source.variables[fieldselect[0]])
 
 
-
 # Try and get grouping function
-grouping_parts = args.groupby.split(':')
-grouping_coordinate = grouping_parts[0]
+groupby_parts = args.groupby.split(':')
+groupby_coordinate = groupby_parts[0]
 
 try:
-	function_parts = grouping_parts[1].split(',')
+	function_parts = groupby_parts[1].split(',')
 except:
 	raise Exception('grouping argument must specify both coordinate and grouping function name. eg: time:yearmonth')
 
@@ -63,22 +65,39 @@ try:
 except:
 	raise Exception('failed to identify grouping function: '.format(args.groupby))
 
-print('grouping function: {}({})'.format(groupby_function, groupby_args))
+print('grouping function: {}({})'.format(groupby_parts[0], groupby_args))
 
 
 # Index the groups
-groups = field.groupby(grouping_coordinate, groupby_function)
+groups = field.groupby(groupby_coordinate, groupby_function)
 
 print('{} groups ({}) indexed'.format(len(groups.groups), args.groupby))
 
 
 # Try and get the apply function
-try:
-	function = eval(args.apply)
-except:
-	raise Exception('Cannot find apply function: {}'.format(args.apply))
+apply_parts = args.apply.split(':')
 
-ds, field = field.apply(groups, function)
+try:
+	apply_func = eval('functions.{}'.format(apply_parts[0]))
+except:
+	raise Exception('Cannot find function {} in functions modules'.format(apply_parts[0]))
+
+if len(apply_parts) > 1:
+	apply_args = apply_parts[1:]
+
+apply_kwargs = {}
+for arg in apply_args:
+	try:
+		name, value = arg.split('=')
+	except:
+		pass
+
+	apply_kwargs[name] = value
+
+apply_kwargs_string = ''.join(['{}={}'.format(name, value) for name, value in apply_kwargs.items()])
+
+print("applying function {}({})".format(apply_parts[0], apply_kwargs_string))
+ds, field = field.apply(groups, apply_parts[0], **apply_kwargs)
 
 
 # Create the target dataset
