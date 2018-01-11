@@ -132,10 +132,23 @@ class netCDF4Dataset(Dataset):
 
 				# Actually write the data array
 				if len(dims):
-					try:
-						ncvar[:] = var.ndarray()
-					except:
-						pass
+#					print(name, var, type(var.ndarray()), var.ndarray())
+					A = var.ndarray()
+
+					# Its a bit messy but seems to be needed to make sure that masked arrays are written
+					# with the correct missing value
+
+					# If the variable has a _FillValue attribute then we use that
+					if '_FillValue' in var.attributes:
+						fill_value = var.attributes['_FillValue']
+
+					# Else we get the default fill value for this data type from the module dictionary
+					else:
+						fill_value = netCDF4.default_fillvals[A.dtype.str.strip('<').strip('>')]
+
+					# Now actually write the data
+					ncvar[:] = np.ma.filled(A, fill_value)
+
 
 				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
 
@@ -163,7 +176,9 @@ class netCDF4Dataset(Dataset):
 
 
 				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
-				self._variables[varname] = netCDFVariable(dims, var.datatype, varname, attrs, data=netCDF4Array(var), dataset=self)
+
+				self._variables[varname] = netCDFVariable(dims, var.datatype, name=varname, attributes=attrs, data=netCDF4Array(var), dataset=self)
+				#self._variables[varname] = Variable(dims, var.datatype, varname, attrs, data=var[:], dataset=self)
 
 
 
