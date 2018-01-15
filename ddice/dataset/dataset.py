@@ -7,13 +7,7 @@ import netCDF4
 
 
 class DatasetError(Exception):
-
-	def __init__(self, msg):
-		self.msg = msg
-
-	def __repr__(self):
-		return self.msg
-
+	"""Dataset Errors"""
 
 class Dataset(object):
 	"""
@@ -111,8 +105,6 @@ class Dataset(object):
 		return DatasetError("Failed to open uri {} using any available Dataset implementation".format(uri))
 
 
-
-
 	@property
 	def attributes(self):
 		return self._attributes
@@ -139,3 +131,5 @@ class Dataset(object):
 			result['variables'][name] = var.asjson(data=False)
 
 		return result
+
+

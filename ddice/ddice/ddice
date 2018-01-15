@@ -3,7 +3,7 @@
 A command line tool to calculate time and space aggregation statistics
 """
 import numpy as np
-
+import glob
 import argparse
 
 from ddice.dataset.netcdf4 import netCDF4Dataset
@@ -31,8 +31,16 @@ if len(source_parts) > 1:
 else:
 	fieldfilter = ''
 
+# Get filenames from wildcard
+filenames = glob.glob(source_parts[0])
 
-source = netCDF4Dataset(uri=source_parts[0])
+# Open all the files
+sources = []
+for filename in filenames:
+	sources.append(netCDF4Dataset(uri=filename))
+
+# Merge them
+source = CFField.merge(sources)
 
 print('source dimensions: {}'.format(source.dimensions))
 print('source variables: {}'.format(source.variables.keys()))

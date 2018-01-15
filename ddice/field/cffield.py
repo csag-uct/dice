@@ -1,8 +1,11 @@
 import re
 
+import numpy as np
 import netCDF4
 
-from field import Field
+from ddice.variable import Dimension, Variable
+from ddice.dataset import Dataset
+from ddice.field import Field
 
 
 
@@ -139,5 +142,113 @@ class CFField(Field):
 		else:
 			return netCDF4.num2date(self.coordinate('time').ndarray(),
 				                    self.coordinate('time').attributes['units'])
+
+
+	@classmethod
+	def makefields(cls, dataset):
+		"""
+		Class method that constructs a dictionary of field instances within a
+		dataset.
+		We can't have this as a Dataset method (which would seem the most logical) because the Field
+		class needs the Dataset class.  If this method were in the Dataset class then the Dataset class
+		would also need the Field class and we would have a circular dependency.
+
+		Conceptually this also makes sense as a Dataset is just a container for Variable instances. The
+		Field is a higher level abstraction of the relationship between a Variable instance and it's
+		host Dataset.
+		"""
+
+		fields = {}
+
+		for name, variable in dataset.variables.items():
+
+			try:
+				field = CFField(variable)
+			except:
+				pass
+
+			if len(field.coordinate_variables) > 0:
+				fields[name] = field
+
+		return fields
+
+
+	@classmethod
+	def merge(cls, datasets):
+		"""
+		Merging two datasets requires being able to distinguish between coordinate variables, ancil
+		variables, and data variables.  So merging is dependent on the data convention being used,
+		most common will be CF conventions (used here) but could conceivably be others, or extenstions
+		of the CF conventions
+
+		Basic strategy is to take ds1 as the master and then loop through each field (data variable)
+		in ds2 checking to see if a field of the same name exists in ds1.  The logic that follows is:
+
+		* If that field name exists in ds1 then compare the fields coordinate variables
+		** If no coordinate variable values have different values then we have a potential ensemble
+		merge.  This requires adding an ensemble dimension to the dataset and recreating the data variable
+		with the new ensemble dimension.
+		** If time is the only coordinate variable with different values then we can do a time merge
+		** If other coordinate variables have different values then we abort, we can't merge different
+		spatial coordinate spaces at the moment though conceptuall I guess its possible (spatial tiles?)
+
+		* If that field name doesn't exist in the ds1 then we again compare coordinate variables
+		** If all coordinate variables are identical then we can just copy the variable over because
+		it can then use the original coordinate variable values in ds1.  This becomes a variable merge.
+
+		"""
+
+		result = Dataset(dataset=datasets[0])
+
+		master_fields = CFField.makefields(result)
+
+		for ds in datasets[1:]:
+
+			fields = CFField.makefields(ds)
+			print(fields)
+
+			comparison = {}
+
+			for name, field in fields.items():
+				print name, field
+
+				comparison[name] = []
+
+				for coord, mapping in field.coordinate_variables.items():
+
+					master_mapping = master_fields[name].coordinate_variables[coord]
+
+					if mapping[0] == master_mapping[0]:
+
+						# For numeric coordinate variables we can numerically compare
+						if mapping[1].dtype == master_mapping[1].dtype and mapping[1].dtype not in [str, unicode]:
+
+							if np.abs(mapping[1].ndarray() - master_mapping[1].ndarray()).max() > 0.0:
+
+								comparison[name].append((coord, mapping))
+
+
+			print comparison
+
+				# Identify time merge
+#				if len(different) == 1 and 'time' in different:
+
+#					dims = master_fields[name].variable.dimensions
+#					shape = np.array(master_fields[name].shape)
+
+#					othershape = np.array(field.shape)
+
+#					time_dim = field.coordinate_variables['time'][0][0]
+#					shape[time_dim] += othershape[time_dim]
+
+#					newdim = Dimension('time', shape[time_dim])
+#					dims[time_dim] = newdim
+
+#					print(dims)
+
+#					newvariable = Variable()
+
+
+		return result
 
 

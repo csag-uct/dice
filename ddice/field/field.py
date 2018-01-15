@@ -650,7 +650,7 @@ class Field(object):
 
 
 		else:
-			raise FieldError("Can't find coordinate {} for groupby".format(coordinate))
+			raise FieldError("Can't find coordinate {} for groupby: {}".format(coordinate, repr(self.coordinate_variables)))
 
 
 		# If coordinate is time then we specifically call the time method

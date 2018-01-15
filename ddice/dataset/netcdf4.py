@@ -1,5 +1,6 @@
 import netCDF4
 import numpy as np
+import glob
 
 from ddice.array import Array
 from ddice.array import reslice
@@ -132,7 +133,7 @@ class netCDF4Dataset(Dataset):
 
 				# Actually write the data array
 				if len(dims):
-#					print(name, var, type(var.ndarray()), var.ndarray())
+
 					A = var.ndarray()
 
 					# Its a bit messy but seems to be needed to make sure that masked arrays are written
@@ -155,13 +156,15 @@ class netCDF4Dataset(Dataset):
 
 		# If we dont' have an existing Dataset instance or a list of dimensions we must be opening an existing uri
 		else:
+
+			# Open the first one... first
 			try:
 				self._ds = netCDF4.Dataset(uri, mode='r')
 			except:
 				raise DatasetError("Can't open dataset {}".format(uri))
 
 			for name, dim in self._ds.dimensions.items():
-				self._dimensions.append(Dimension(name, dim.size))
+				self._dimensions.append(Dimension(name, len(dim)))
 
 			for name in self._ds.ncattrs():
 				self._attributes[name] = self._ds.getncattr(name)
@@ -179,6 +182,7 @@ class netCDF4Dataset(Dataset):
 
 				self._variables[varname] = netCDFVariable(dims, var.datatype, name=varname, attributes=attrs, data=netCDF4Array(var), dataset=self)
 				#self._variables[varname] = Variable(dims, var.datatype, varname, attrs, data=var[:], dataset=self)
+
 
 
 
