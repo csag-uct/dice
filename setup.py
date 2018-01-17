@@ -8,4 +8,10 @@ setup(name='ddice',
       author_email='cjack@csag.uct.ac.za',
       license='MIT',
       packages=['ddice'],
+      install_requires=[
+          'netCDF4',
+          'numpy',
+          'shapely',
+          'pyproj'
+      ],
       zip_safe=False)
