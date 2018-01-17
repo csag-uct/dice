@@ -86,6 +86,11 @@ class Field(object):
 			return None
 
 
+	@property
+	def name(self):
+		return self.variable.name
+
+
 	# Shape delegates to the upstream variable shape property
 	@property
 	def shape(self):
@@ -305,15 +310,11 @@ class Field(object):
 			else:
 				continue
 
-			#print variable, mapping, value
-
 			vals = variable.ndarray()
 			mask = vals < value[0]
 
 			if len(mask) > 1 and len(value) > 1:
 				mask = np.logical_or(mask, (vals > value[1]))
-
-			#print(value, variable[:], mask)
 
 			mapping = tuple(mapping)
 
@@ -323,9 +324,7 @@ class Field(object):
 			else:
 				mappings[mapping] = mask
 
-
 		subset = [slice(0,size) for size in list(self.shape)]
-		#print(subset)
 
 		for mapping, mask in mappings.items():
 
@@ -334,9 +333,9 @@ class Field(object):
 			for i in range(0,len(nonzero)):
 				start, stop = nonzero[i].min(), nonzero[i].max()
 
-				# 1D mappings could be spare masks, rather than ranges
-				if len(nonzero) == 1:
-					if stop - start + 1 > nonzero[0].shape[0]:
+				# 1D mappings could be sparse selection, if so, keep it as such
+				if len(nonzero) == 1 and stop - start + 1 > nonzero[0].shape[0]:
+
 						subset[mapping[i]] = nonzero[0]
 
 				# otherwise we construct a slice
