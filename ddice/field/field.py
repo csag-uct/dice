@@ -310,7 +310,20 @@ class Field(object):
 			else:
 				continue
 
-			vals = variable.ndarray()
+			# Time is a special case
+			if name == 'time':
+
+				if 'calendar' in variable.attributes:
+					calendar = variable.attributes['calendar']
+				else:
+					calendar = None
+
+				vals = netCDF4.num2date(variable.ndarray(), units=variable.attributes['units'], calendar='')
+
+
+			else:
+				vals = variable.ndarray()
+
 			mask = vals < value[0]
 
 			if len(mask) > 1 and len(value) > 1:
