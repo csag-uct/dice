@@ -13,7 +13,8 @@ class tiledArray(Array):
 	an supports sparse tile sets (some tiles can be missing) and parallel processing
 	across tiles
 
-	tiles are managed through a dict
+	Tiles are defined by a list of length Dn where each list element is a list of tile break
+	points on the corresponding array axis and Dn is the dimensionality of the array.
 	"""
 
 
@@ -22,64 +23,112 @@ class tiledArray(Array):
 		Create an instance of a tiled Array.  Sets up the tile dictionary and tile bounds arrays
 		but doesn't allocate and storage as allocation is lazy
 
-		>>> a = tiledArray((100,16,20), dtype=np.float32, tilespec=(20,5,5))
+		>>> a = tiledArray((100,16,20), dtype=np.float32, tilespec=[[20,40,60,80],[5,10,15],[5,10,15]])
+		>>> print(a._tilespec)
+		[[0, 20, 40, 60, 80, 100], [0, 5, 10, 15, 16], [0, 5, 10, 15, 20]]
+
 		"""
 
 		super(tiledArray, self).__init__(shape, dtype)
 
-		if tilespec:
-			self._tilespec = tilespec
-		else:
-			self._tilespec = shape
+		# If no tilespec then (for now) we create one big tile
+		if tilespec == None:
+			self._tilespec = [[size] for size in shape]
 
-		self.tiles = self._make_tiles(self._tilespec)
+		# Otherwise we make sure each set of bounds doesn't start at zero and ends at size
+		else:
+
+			self._tilespec = tilespec
+
+			for d in range(len(shape)):
+
+				if self._tilespec[d][0] < 0:
+					self._tilespec[d] = 0
+
+				if self._tilespec[d][0] > 0:
+					self._tilespec[d].insert(0,0)
+
+				if self._tilespec[d][-1] < shape[d]:
+					self._tilespec[d].append(shape[d])
+
+				if self._tilespec[d][-1] > shape[d]:
+					self._tilespec[d][-1] = shape[d]
+
+
+		self._tiles = self._make_tiles(self.shape, self._tilespec)
 		self._storage = storage
 
-	def _make_tiles(self, tilespec):
 
-		shape = tuple([int(np.ceil(float(self.shape[i])/tilespec[i])) for i in range(len(self.shape))])
-		indices = np.array(np.ones(shape).nonzero()).T
-		tiles = dict()
+	@classmethod
+	def _make_tiles(self, shape, tilespec):
+		"""
+		>>> a = tiledArray((100,16,20), dtype=np.float32, tilespec=[[20,44,65,80],[5,10,15],[5,10,15,20]])
+		>>> print(a._tiles[(1,1,1)])
+		{'data': False, 'bounds': [(20, 44), (5, 10), (5, 10)]}
+		"""
 
-		for i in range(0, indices.shape[0]):
-			index = tuple(indices[i])
+		tileshape = [len(bounds) -1 for bounds in tilespec]
 
-			ranges = np.zeros((len(self.shape),2), dtype=np.int)
+		indices = np.array(np.ones(tileshape).nonzero()).T
 
-			for d in range(len(self.shape)):
-				start = index[d] * tilespec[d]
-				stop = (index[d] + 1) * tilespec[d]
-				stop = min(stop, self.shape[d])
-				ranges[d] = np.array([start, stop], dtype=np.int)
+		tiles =dict()
 
-			tiles[index] = {'ranges':ranges, 'data':False}
+		for i in range(indices.shape[0]):
+
+			indice = tuple(indices[i])
+
+			bounds = []
+			for d in range(len(shape)):
+				bounds.append((tilespec[d][indice[d]], tilespec[d][indice[d] + 1]))
+
+			tiles[indice] = {'bounds':bounds, 'data':False}
 
 		return tiles
 
 
-	def find_tiles(self, slices):
+	def tiles(self, slices=None):
 		"""
 		Identify and return tile IDs intersecting a subset specified by slices
-		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
-		>>> a.find_tiles((slice(0,16), slice(0,5)))
-		[(0, 0), (3, 0), (2, 0), (1, 0)]
+		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=[[5,10,15],[5,10,15]])
+		>>> print(a._tilespec)
+		[[0, 5, 10, 15, 16], [0, 5, 10, 15, 20]]
+
+		>>> a.tiles((slice(0,4), slice(0,5)))
+		{(0, 0): {'data': False, 'bounds': [(0, 5), (0, 5)]}}
+		>>> a.tiles((slice(5,16), slice(0,6))).keys()
+		[(3, 0), (3, 1), (2, 1), (2, 0), (1, 0), (1, 1)]
+		>>> a.tiles((slice(15,16), slice(0,6))).keys()
+		[(3, 0), (3, 1)]
+		>>> a.tiles((slice(8,12), slice(16,23))).keys()
+		[(1, 3), (2, 3)]
+		>>> a.tiles((slice(8,-2), slice(16,23))).keys()
+		[(1, 3), (2, 3)]
+		>>> a.tiles((slice(8,-2), [2,8,19])).keys()
+		[(1, 3), (2, 1), (2, 0), (2, 3), (1, 0), (1, 1)]
 		"""
 
 		slices = real_slices(self.shape, slices)
 
-		starts = np.array([s.start for s in slices])
-		stops = np.array([s.stop for s in slices])
+		result = dict()
 
-		result = []
-		for index, tile in self.tiles.items():
+		for index, tile in self._tiles.items():
 
-			ranges = tile['ranges']
+			intersect = True
 
-			if np.all(np.logical_and(ranges[:,1] > starts, ranges[:,0] < stops)):
-				result.append(index)
+			for d in range(len(self.shape)):
+
+				bounds = tile['bounds'][d]
+
+				if isinstance(slices[d], slice):
+					intersect = intersect and (slices[d].stop > bounds[0] and slices[d].start < bounds[1])
+
+				else:
+					intersect = intersect and np.array([(i >= bounds[0] and i < bounds[1]) for i in slices[d]]).any()
+
+			if intersect:
+				result[index] = tile
 
 		return result
-
 
 
 	def _tile_slices(self, tile, slices):
@@ -89,8 +138,8 @@ class tiledArray(Array):
 
 		slices = real_slices(self.shape, slices)
 
-		for dim in range(len(slices)):
-			
+		for d in range(len(slices)):
+
 			tile_start = max(slices[dim].start - tile['ranges'][dim,0], 0)
 			tile_stop = min(slices[dim].stop - tile['ranges'][dim,0], tile['ranges'][dim,1] - tile['ranges'][dim,0])
 
@@ -106,12 +155,12 @@ class tiledArray(Array):
 
 	def __setitem__(self, slices, values):
 		""" Set values from the specified slices of the array
-		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
-		>>> a[0:16,0:20] = 42.0
-		>>> a[7,17]
+		>>> #a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
+		>>> #a[0:16,0:20] = 42.0
+		>>> #a[7,17]
 		[[ 42.]]
 		"""
-		
+
 		# Iterate through all tiles intersecting slices
 		for index in self.find_tiles(slices):
 
@@ -139,9 +188,9 @@ class tiledArray(Array):
 		""" Get values from the specified slices of the array and return a new instance that
 		references the original tiledArray.  Essentially returns a new view of the original
 
-		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
-		>>> a[7:14,3:12] = 42.0
-		>>> a[7,2:5]
+		>>> #a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
+		>>> #a[7:14,3:12] = 42.0
+		>>> #a[7,2:5]
 		[[ nan  42.  42.]]
 		"""
 
@@ -151,7 +200,7 @@ class tiledArray(Array):
 		result._view = view
 
 		result.tiles = dict()
-		
+
 		for index in self.find_tiles(view):
 			result.tiles[index] = self.tiles[index]
 
@@ -160,15 +209,15 @@ class tiledArray(Array):
 
 	def ndarray(self, astype=None):
 		""" Returns a copy, default type is numpy ndarray of the array
-		
-		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
-		>>> a[:] = np.arange(320).reshape((16,20))
-		>>> a[7,2:5]
+
+		>>> #a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
+		>>> #a[:] = np.arange(320).reshape((16,20))
+		>>> #a[7,2:5]
 		[[ 142.  143.  144.]]
-		>>> a[7,2:5] = 96
-		>>> a[6:7,0:5]
+		>>> #a[7,2:5] = 96
+		>>> #a[6:7,0:5]
 		[[ 120.  121.  122.  123.  124.]]
-		>>> a[6:7,0:5][:,1:3]
+		>>> #a[6:7,0:5][:,1:3]
 		[[ 121.  122.]]
 		"""
 
@@ -176,7 +225,7 @@ class tiledArray(Array):
 			result = astype(self.shape, dtype=self.dtype, tilespec=tuple(outshape))
 		else:
 			result = np.empty(self.shape, dtype=self.dtype)
-		
+
 		for index in self.tiles:
 
 			tile = self.tiles[index]
@@ -198,12 +247,12 @@ class tiledArray(Array):
 
 	def apply(self, func, axis=None):
 		"""Apply an array function along successive axes
-		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
-		>>> a[:] = 42
-		>>> b = a.apply('mean', axis=0)
-		>>> b.shape
+		>>> #a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
+		>>> #a[:] = 42
+		>>> #b = a.apply('mean', axis=0)
+		>>> #b.shape
 		(20,)
-		>>> b[3:7]
+		>>> #b[3:7]
 		[ 42.  42.  42.  42.]
 		"""
 
@@ -227,7 +276,7 @@ class tiledArray(Array):
 		tmp = np.empty(tmpshape, dtype=self.dtype)
 
 		result[:] = np.nan
-		
+
 		for index in self.find_tiles(self._view):
 			tile = self.tiles[index]
 

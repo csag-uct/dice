@@ -3,6 +3,8 @@ import numpy as np
 def real_slices(shape, slices=()):
 	"""Turns a possibly truncated mixture of slices and integer indices into a full tuple with
 	the same length as dimensionality, of valid array indices (slice, integer, or iterable)
+
+	Also checks for slices out of range
 	"""
 
 	# If slices is not a list/tuple then make it one
@@ -29,6 +31,13 @@ def real_slices(shape, slices=()):
 				stop = shape[i]
 			if step == None:
 				step = 1
+
+			if start < 0:
+				start = 0
+			if stop > shape[i]:
+				stop = shape[i]
+			if stop < 0:
+				stop = shape[i] + stop
 
 			result[i] = slice(start, stop, step)
 
