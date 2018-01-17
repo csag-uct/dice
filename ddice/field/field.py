@@ -19,8 +19,6 @@ import shapely.ops
 
 import json
 
-import matplotlib.pyplot as plt
-
 import time as timing
 
 
