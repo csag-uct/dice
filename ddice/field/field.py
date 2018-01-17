@@ -316,9 +316,9 @@ class Field(object):
 				if 'calendar' in variable.attributes:
 					calendar = variable.attributes['calendar']
 				else:
-					calendar = None
+					calendar = 'standard'
 
-				vals = netCDF4.num2date(variable.ndarray(), units=variable.attributes['units'], calendar='')
+				vals = netCDF4.num2date(variable.ndarray(), units=variable.attributes['units'], calendar=calendar)
 
 
 			else:
