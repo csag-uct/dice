@@ -89,7 +89,7 @@ class CFField(Field):
 		else:
 			coordinates = []
 
-
+		# Search through all variables to try and find coordinate/ancil variables for this variable
 		for name, var in self.variable.dataset.variables.items():
 
 			# If we have units, check if they are coordinate units, if not coordinate_name will be None
@@ -102,8 +102,15 @@ class CFField(Field):
 			# This could be a coordinate/ancilary variable if:
 			# 1) Its in the coordinates attribute list
 			# 2) Its dimensions are a reduced subset of the variables dimensions
-			if (name in coordinates) or (set(var.dimensions).issubset(self.variable.dimensions) and len(var.dimensions) < len(self.variable.dimensions)):
 
+			# Can't do set operations with Dimension instances because they aren't hashable
+			# So we use their string representations instead
+			var_dimension_strings = [repr(d) for d in var.dimensions]
+			self_dimension_strings = [repr(d) for d in self.variable.dimensions]
+
+			if (name in coordinates) or (set(var_dimension_strings).issubset(self_dimension_strings) and (len(var.dimensions) < len(self.variable.dimensions))):
+
+				# Now that we have found a coordinate variables, construct its dimensions mapping
 				mapping = []
 				for dim in var.dimensions:
 					try:
@@ -111,8 +118,10 @@ class CFField(Field):
 					except:
 						pass
 
+				# If we have a coordinate_name then we have a coordinate, otherwise its ancilary
 				if coordinate_name:
 					self.coordinate_variables[coordinate_name] = (mapping, var)
+
 				else:
 					self.ancil_variables[name] = (mapping, var)
 
