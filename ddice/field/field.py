@@ -524,7 +524,7 @@ class Field(object):
 		Point features, for gridded datasets this will be a set of simple Polygon features either inferred from the
 		grid point locations, or directly from the cell bounds attributes (not implemented yet)
 
-		The data parameter can one of None, 'last', 'all'
+		The values parameter can one of None, 'last', 'all'
 
 		The timestamp parameter can be one of None, 'last', 'range'
 
@@ -549,66 +549,43 @@ class Field(object):
 		# First we need to determine the type of grid we have.  If latitude and longitude are 1D and both
 		# map to the same variable dimension then we have a discrete points dataset, otherwise a gridded dataset
 
-		result = {"type":"FeatureCollection", "features":[]}
+		geometries = self.geometries()
 
-
-		if values == 'last':
-
-			s = [slice(None)]*len(self.variable.shape)
-			timedim = self.coordinate_variables['time'][0][0]
-
-			s[timedim] = slice(-1,None)
-			data = self.variable[s]
-			last_time = self.times[-1].isoformat()
-
-		elif values == 'last_valid':
-			s = [slice(None)]*len(self.variable.shape)
-			data = self.variable[s][:]
-
-
-		if len(self.latitudes.shape) == 1 and len(self.longitudes.shape) == 1 and (self.coordinate_variables['latitude'][0] == self.coordinate_variables['longitude'][0]):
-
-			feature_dim = self.coordinate_variables['latitude'][0][0]
-
-			# Iterate through features by iterating through longitude
-			for feature_id in range(self.longitudes.shape[0]):
-
-				coordinates = [float(self.longitudes.ndarray()[feature_id]), float(self.latitudes.ndarray()[feature_id])]
-
-				if 'vertical' in self.coordinate_variables:
-					coordinates.extend([float(self.vertical.ndarray()[feature_id])])
-
-				feature = {"type":"Feature", "geometry":{"type": "Point", "coordinates":coordinates}}
-
-				# Feature properties come form ancilary variables
-				properties = {}
-				for name, mapping in self.ancil_variables.items():
-					properties[name] = mapping[1][feature_id].ndarray()[0]
-
-				# Process data based properties
-				if values == 'last':
-					s[feature_dim] = feature_id
-					properties['value'] = (last_time, float(data[s][0]))
-
-				elif values == 'last_valid':
-					s[feature_dim] = feature_id
-					subset = data[s]
-
-					if np.ma.count(subset):
-						last_time = np.ma.masked_array(self.times[:], mask=np.ma.getmaskarray(data[s])).compressed()[-1]
-						properties['value'] = (last_time, float(data[s].compressed()[-1]))
-					else:
-						properties['value'] = (None, None)
-
-
-				feature['properties'] = properties
-				result['features'].append(feature)
-
+		if len(self.shape) > geometries.shape:
+			data = self.variable.ndarray().mean(axis=0).filled(0.0)
 
 		else:
-			return {'featureType':'gridded'}
+			data = self.variable.ndarray().filled(0.0)
 
-		return result
+
+		result = {"type":"FeatureCollection", "features":[]}
+
+		geometries = geometries.flatten()
+		data = data.flatten()
+
+		id = 0
+		for geometry in geometries:
+
+			feature = {'type':'Feature', 'properties':{}}
+			feature['geometry'] = {'type':geometry.geom_type}
+
+			if geometry.geom_type == 'Polygon':
+				coordinates = [[list(xy) for xy in list(geometry.exterior.coords)]]
+
+			else:
+				coordinates = list(geometry.coords)
+
+			feature['geometry']['coordinates'] = coordinates
+
+			feature['properties']['_id'] = id
+			feature['properties'][self.variable.name] = float(data[id])
+
+			result['features'].append(feature)
+
+			id += 1
+
+		return json.dumps(result)
+
 
 
 
