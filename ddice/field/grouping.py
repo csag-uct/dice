@@ -23,6 +23,14 @@ def generic(values, keyfunc):
 	return result, None
 
 
+def all(values, bounds=False):
+
+	def keyfunc(value):
+		return 'all'
+
+	return generic(values, keyfunc)
+
+
 def yearmonth(values, bounds=False):
 
 	def keyfunc(value):
