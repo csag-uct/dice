@@ -23,7 +23,6 @@ def generic(values, keyfunc):
 	return result, None
 
 
-
 def yearmonth(values, bounds=False):
 
 	def keyfunc(value):

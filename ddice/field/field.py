@@ -519,7 +519,7 @@ class Field(object):
 
 
 
-	def feature_collection(self, values=None):
+	def feature_collection(self, values=None, add_areas=False):
 		"""Return a dict of features (GeoJSON structure) for this field.  For point datasets this will be a set of
 		Point features, for gridded datasets this will be a set of simple Polygon features either inferred from the
 		grid point locations, or directly from the cell bounds attributes (not implemented yet)
@@ -549,13 +549,19 @@ class Field(object):
 		# First we need to determine the type of grid we have.  If latitude and longitude are 1D and both
 		# map to the same variable dimension then we have a discrete points dataset, otherwise a gridded dataset
 
+		# Get geometry array
 		geometries = self.geometries()
 
+		# If we want areas then get them
+		if add_areas:
+			areas = self.areas().flatten()
+
+
 		if len(self.shape) > geometries.shape:
-			data = self.variable.ndarray().mean(axis=0).filled(0.0)
+			data = np.masked_array(self.variable.ndarray()).mean(axis=0).filled(0.0)
 
 		else:
-			data = self.variable.ndarray().filled(0.0)
+			data = np.masked_array(self.variable.ndarray()).filled(0.0)
 
 
 		result = {"type":"FeatureCollection", "features":[]}
@@ -578,6 +584,10 @@ class Field(object):
 			feature['geometry']['coordinates'] = coordinates
 
 			feature['properties']['_id'] = id
+
+			if add_areas:
+				feature['properties']['area'] = float(areas[id])
+
 			feature['properties'][self.variable.name] = float(data[id])
 
 			result['features'].append(feature)
