@@ -26,16 +26,6 @@ class FieldError(Exception):
 	"""Raise a Field related Exception"""
 
 
-class GroupBy(object):
-
-	def __init__(self, coordinate, groups, weights=[]):
-
-		self.coordinate = coordinate
-		self.groups = groups
-		self.weights = weights
-
-
-
 class Field(object):
 
 	def __init__(self, variable):
@@ -320,11 +310,16 @@ class Field(object):
 
 				vals = netCDF4.num2date(variable.ndarray(), units=variable.attributes['units'], calendar=calendar)
 
-
 			else:
 				vals = variable.ndarray()
 
-			mask = vals < value[0]
+			# str or unicode values
+			if isinstance(value[0], str) or isinstance(value[0], unicode):
+				mask = vals != value
+
+			# numerical values
+			else:
+				mask = vals < value[0]
 
 			if len(mask) > 1 and len(value) > 1:
 				mask = np.logical_or(mask, (vals > value[1]))
@@ -537,7 +532,7 @@ class Field(object):
 
 		>>> features = f.feature_collection()
 		>>> print(features['features'][0]['properties'])
-		{u'name': u'BOSCHRAND', u'id': u'0585409_W'}
+		{u'pr': 0.0, '_id': 0, u'name': u'BOSCHRAND', u'id': u'0585409_W'}
 
 
 		>>> ds = netCDF4Dataset(uri='ddice/testing/Rainf_WFDEI_GPCC_monthly_total_1979-2009_africa.nc')
@@ -558,13 +553,13 @@ class Field(object):
 
 
 		if len(self.shape) > geometries.shape:
-			data = np.masked_array(self.variable.ndarray()).mean(axis=0).filled(0.0)
+			data = np.ma.masked_array(self.variable.ndarray()).mean(axis=0).filled(0.0)
 
 		else:
-			data = np.masked_array(self.variable.ndarray()).filled(0.0)
+			data = np.ma.masked_array(self.variable.ndarray()).filled(0.0)
 
 
-		result = {"type":"FeatureCollection", "features":[]}
+		result = dict({"type":"FeatureCollection", "features":[]})
 
 		geometries = geometries.flatten()
 		data = data.flatten()
@@ -583,18 +578,25 @@ class Field(object):
 
 			feature['geometry']['coordinates'] = coordinates
 
+			# Add an _id property
 			feature['properties']['_id'] = id
 
+			# Add ancilary variable properties
+			for name, var in self.ancil_variables.items():
+				feature['properties'][name] = var[1].ndarray().flatten()[id]
+
+			# Optionally add an area property
 			if add_areas:
 				feature['properties']['area'] = float(areas[id])
 
+			# Add the data variable property
 			feature['properties'][self.variable.name] = float(data[id])
 
 			result['features'].append(feature)
 
 			id += 1
 
-		return json.dumps(result)
+		return result
 
 
 
@@ -615,9 +617,9 @@ class Field(object):
 		>>> variable = ds.variables['pr']
 		>>> f = CFField(variable)
 
-		>>> groups = f.groupby('time', grouping.yearmonth)
-		>>> print(groups.coordinate, len(groups.groups))
-		('time', 672)
+		>>> groupby = f.groupby('time', grouping.yearmonth)
+		>>> print(groupby['coordinate'], len(groupby['groups']))
+		(<netCDFVariable: time [(u'time', 20454)]>, 672)
 
 		>>> from shapely.geometry import shape
 		>>> from fiona import collection
@@ -659,7 +661,9 @@ class Field(object):
 
 
 		# Apply grouping function to coordinate values
-		groups, weights = func(coordinate_values, **args)
+		groupby = dict()
+		groupby['coordinate'] = coordinate_variable
+		groupby['groups'] = func(coordinate_values, **args)
 
 		#print(groups, weights)
 
@@ -667,10 +671,11 @@ class Field(object):
 		s = [slice(None)] * len(self.shape)
 
 		# Process each group
-		for key, group in groups.items():
+		for key, group in groupby['groups'].items():
 
 			for dim in mapping:
-				s[dim] = group[mapping.index(dim)]
+#				print(dim, group['subset'], mapping, mapping.index(dim))
+				s[dim] = group['subset'][mapping.index(dim)]
 
 			#print('groupby1', key, mapping, group, s)
 
@@ -682,11 +687,12 @@ class Field(object):
 
 
 			# Save the slices for this group
-			groups[key] = copy.copy(s)
+			groupby['groups'][key]['subset'] = copy.copy(s)
+			groupby['groups'][key]['weights'] = group['weights']
 			#print('groupby2', key, groups[key])
 
 
-		return GroupBy(coordinate, groups, weights)
+		return groupby
 
 
 
@@ -758,23 +764,23 @@ class Field(object):
 		# Now we actually iterate through the groups applying the function and writing results to the
 		# the new variable and coordinate values to the new coordinate variable
 		i = 0
-		for key, group in groupby.groups.items():
+		for key, subset in groupby['groups'].items():
 
 			# Apply the funcion and assign to the new variable
 			now = timing.time()
 
-			variable[i] = func(self.variable[group].ndarray(), axis=mapping[0], **kwargs)
+			variable[i] = func(self.variable[group].ndarray(), axis=mapping, **kwargs)
 
 			print("{} took {} ms".format(key, (timing.time() - now)*1000))
 
 			#print(coordinate_variable[group[mapping[0]]])
 
 			# Extract the last coordinate value from the original coordinate variable for this group
-			if isinstance(group[mapping[0]], slice):
-				variables[groupby.coordinate][i] = coordinate_variable[[group[mapping[0]].stop - 1]].ndarray()
+			if isinstance(subset[mapping[0]], slice):
+				variables[coordinate_variable.name][i] = coordinate_variable[[group[mapping[0]].stop - 1]].ndarray()
 
 			else:
-				variables[groupby.coordinate][i] = coordinate_variable[[group[mapping[0]]]][-1].ndarray()
+				variables[coordinate_variable.name][i] = coordinate_variable[[group[mapping[0]]]][-1].ndarray()
 
 			#print(variables[groupby.coordinate][i].ndarray())
 
