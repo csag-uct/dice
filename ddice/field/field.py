@@ -724,11 +724,11 @@ class Field(object):
 
 
 		# First check if we can get the coordinate variable
-		if groupby.coordinate in self.coordinate_variables:
-			mapping, coordinate_variable = self.coordinate_variables[groupby.coordinate]
+		if groupby['coordinate'].name in self.coordinate_variables:
+			mapping, coordinate_variable = self.coordinate_variables[groupby['coordinate'].name]
 
 		else:
-			raise FieldError("Can't find coordinate {} in field for groupby method".format(groups.coordinate))
+			raise FieldError("Can't find coordinate {} in field for groupby method".format(groupby['coordinate']))
 
 		# Currently can't apply on multi-dimensional coordinate variables
 		if len(mapping) > 1:
@@ -738,7 +738,7 @@ class Field(object):
 		# by the group size
 
 		dimensions = list(self.variable.dimensions)
-		dimensions[mapping[0]] = Dimension(self.variable.dimensions[mapping[0]].name, len(groupby.groups))
+		dimensions[mapping[0]] = Dimension(self.variable.dimensions[mapping[0]].name, len(groupby['groups']))
 
 		# Create the variable using numpy storage for now
 		variable = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
@@ -749,7 +749,7 @@ class Field(object):
 		for name, var in self.coordinate_variables.items():
 
 			print name, var, var[1].name
-			if name == groupby.coordinate:
+			if name == coordinate_variable.name:
 				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, var[1].name, attributes=var[1].attributes)
 
 			else:
@@ -764,23 +764,26 @@ class Field(object):
 		# Now we actually iterate through the groups applying the function and writing results to the
 		# the new variable and coordinate values to the new coordinate variable
 		i = 0
-		for key, subset in groupby['groups'].items():
+		for key, group in groupby['groups'].items():
+
+			# Get the subset and the weights for this group
+			subset = group['subset']
+			mask = group['weights']
 
 			# Apply the funcion and assign to the new variable
 			now = timing.time()
 
-			variable[i] = func(self.variable[group].ndarray(), axis=mapping, **kwargs)
+			variable[i] = func(self.variable[subset].ndarray(), axis=tuple(mapping), **kwargs)
+			print(variable[i].shape)
 
 			print("{} took {} ms".format(key, (timing.time() - now)*1000))
 
-			#print(coordinate_variable[group[mapping[0]]])
-
 			# Extract the last coordinate value from the original coordinate variable for this group
 			if isinstance(subset[mapping[0]], slice):
-				variables[coordinate_variable.name][i] = coordinate_variable[[group[mapping[0]].stop - 1]].ndarray()
+				variables[coordinate_variable.name][i] = coordinate_variable[[subset[mapping[0]].stop - 1]].ndarray()
 
 			else:
-				variables[coordinate_variable.name][i] = coordinate_variable[[group[mapping[0]]]][-1].ndarray()
+				variables[coordinate_variable.name][i] = coordinate_variable[[subset[mapping[0]]]][-1].ndarray()
 
 			#print(variables[groupby.coordinate][i].ndarray())
 
