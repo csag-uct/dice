@@ -2,16 +2,26 @@ import netCDF4
 import numpy as np
 from collections import OrderedDict
 
+from datetime import datetime as dt
+
 import fiona
-import shapely
+
+from shapely.geometry import shape, asShape, Polygon
 
 from copy import copy
 
+class Group(object):
+
+	def __init__(self, slices=None, weights=None, bounds=None):
+
+		self.slices = [[]] if slices == None else slices
+		self.weights = [] if weights == None else weights
+		self.bounds = [[]] if bounds == None else bounds
 
 
-def generic(values, keyfunc):
+def generic1d(values, keyfunc):
 
-	result = OrderedDict()
+	groups = OrderedDict()
 
 	# Step through all values
 	for index in range(0, len(values)):
@@ -20,67 +30,103 @@ def generic(values, keyfunc):
 		key, weight = keyfunc(values[index])
 
 		# Add to results dictionary
-		if key not in result.keys():
-			result[key] = {'subset':[[]], 'weights':[[]]}
+		if key not in groups.keys():
+			groups[key] = Group()
 
-		result[key]['subset'][0].append(index),
-		result[key]['weights'][0].append(weight)
+		groups[key].slices[0].append(index)
+		groups[key].weights.append(weight)
 
-	return result
+	return groups
 
 
 def all(values, bounds=False):
 
 	def keyfunc(value):
-		return 'all', 1
+		return values[-1],
 
-	return generic(values, keyfunc)
-
-
-def yearmonth(values, bounds=False):
-
-	def keyfunc(value):
-		return (value.year, value.month), 1
-
-	return generic(values, keyfunc)
+	return generic1d(values, keyfunc)
 
 
-def month(values, bounds=False):
+def yearmonth(values):
 
 	def keyfunc(value):
-		return value.month, 1
+		return dt(value.year, value.month, 15), 1
 
-	return generic(values, keyfunc)
+	return generic1d(values, keyfunc)
 
 
-def year(values, bounds=False):
+def month(values):
 
 	def keyfunc(value):
-		return value.year, 1
+		return dt(values[0].year, value.month,15), 1
 
-	return generic(values, keyfunc)
+	return generic1d(values, keyfunc)
 
 
-def geometry(source, target=None, key_property=None):
+def year(values):
 
-	print(source.shape, target)
+	def keyfunc(value):
+		return dt(value.year,6,30), 1
 
-	if isinstance(target, str) or isinstance(target, unicode):
-		collection = fiona.open(target)
+	return generic1d(values, keyfunc)
 
-	else:
-		collection = target
 
-	intersects = OrderedDict()
+def rollingwindow(values, windowsize=10):
+
+	groups = OrderedDict()
+
+	for i in range(0, values.shape[0] - windowsize):
+
+		key = values[i+windowsize/2]
+
+		if key not in result.keys():
+			groups[key] = Group()
+
+		groups[key].subset = np.arange(i, i+windowsize)
+
+	return groups
+
+
+def geometry(source, target=None, key_property=None, areas=False):
+
+	# Split out bounds and geometries array from source
+	bounds, source = source
 
 	original_shape = source.shape
   	source = source.flatten()
+
+	try:
+		collection = fiona.open(target)
+
+	except:
+
+		if isinstance(target, list):
+			collection = target
+
+		elif target == None:
+
+			collection = [{
+				'geometry':asShape(Polygon([(-10,-90), (-10,90), (360, 90), (360,-90),(-10,-90)])),
+#				'geometry':asShape(Polygon([
+#					(bounds[0], bounds[1]),
+#					(bounds[0], bounds[3]),
+#					(bounds[1], bounds[3]),
+#					(bounds[1], bounds[1]),
+#					(bounds[0], bounds[1]),
+#				])),
+				'properties':{}
+			}]
+
+
+	intersects = OrderedDict()
+
+
 
   	# First gather all source geometries into each group
   	tid = 0
   	for feature in collection:
 
-  		geom = shapely.geometry.shape(feature['geometry'])
+  		geom = shape(feature['geometry'])
 
   		sid = 0
   		for s in source:
@@ -103,6 +149,7 @@ def geometry(source, target=None, key_property=None):
 
 		tid += 1
 
+
 	groups = OrderedDict()
 
 	# Now process each group into slices and weights
@@ -114,25 +161,22 @@ def geometry(source, target=None, key_property=None):
 		w = np.zeros(source.shape, dtype=np.float32)
 		w[indices] = np.array(intersections)
 
+		# Get weights back to original shape
 		w = w.reshape(original_shape)
-		nonzero = w.nonzero()
 
-#		print(key, nonzero)
+		# Find non-zero weights
+		nonzero = w.nonzero()
 
 		# Construct the slice based on min and max non zero weight indices
 		s = []
-
 		for axis in range(len(original_shape)):
 			s.append(slice(nonzero[axis].min(), nonzero[axis].max()+1))
 
+		# Mutiply weights by areas if available
+		if isinstance(areas, np.ndarray):
+			w *= areas
 
-		# Accumulate the list of groups
-		groups[key] = {'subset':None, 'weights':None}
-		groups[key]['subset'] = s
-
-		# Subset and normalize the weights
-		w = w[s]/w[s].sum()
-		groups[key]['weights'] = w
+		groups[key] = Group(s, w[s]/w[s].sum(), [])
 
 
 	return groups

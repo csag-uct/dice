@@ -22,6 +22,15 @@ import json
 import time as timing
 
 
+class GroupBy(object):
+
+	def __init__(self, source, groups):
+
+		self.source = source
+		self.groups = groups
+
+
+
 class FieldError(Exception):
 	"""Raise a Field related Exception"""
 
@@ -94,6 +103,10 @@ class Field(object):
 		cvs = self.coordinate_variables
 		latitudes = self.coordinate('latitude')
 
+		# We may not have a latitude coordinate
+		if not latitudes:
+			return None
+
 		# If latitude and longitude map to different dimensions and we aren't already 2D
 		if cvs['latitude'][0][0] != cvs['longitude'][0][0] and len(latitudes.shape) == 1:
 
@@ -114,6 +127,10 @@ class Field(object):
 
 		cvs = self.coordinate_variables
 		longitudes = self.coordinate('longitude')
+
+		# We may not have a longitude coordinate
+		if not longitudes:
+			return None
 
 		# If latitude and longitude map to different dimensions and we aren't already 2D
 		if cvs['latitude'][0][0] != cvs['longitude'][0][0] and len(longitudes.shape) == 1:
@@ -406,9 +423,7 @@ class Field(object):
 
 		# Cache this!
 		if not isinstance(self._geometries, bool):
-			return self._geometries
-
-
+			return self._bounds, self._geometries
 
 		latitudes = self.latitudes.ndarray()
 		longitudes = self.longitudes.ndarray()
@@ -466,8 +481,9 @@ class Field(object):
 
 		# Cache this!
 		self._geometries = result
+		self._bounds = (longitudes.min(), latitudes.min(), longitudes.max(), latitudes.max())
 
-		return self._geometries
+		return self._bounds, self._geometries
 
 
 	def areas(self):
@@ -495,7 +511,7 @@ class Field(object):
 		if not isinstance(self._areas, bool):
 			return self._areas
 
-		geometries = self.geometries()
+		bounds, geometries = self.geometries()
 
 
 #       project = partial(
@@ -505,9 +521,13 @@ class Field(object):
 
 		proj_from = pyproj.Proj(init='epsg:4326')
 
-		calc_areas = np.vectorize(lambda f: shapely.ops.transform(partial(pyproj.transform, proj_from, pyproj.Proj(proj='aea', lat1=f.bounds[1], lat2=f.bounds[3])), f).area)
+		# The +over option in Proj solves the problem of wrapping at -180/+180 longitudes...
+		calc_areas = np.vectorize(lambda f: shapely.ops.transform(partial(pyproj.transform,
+			proj_from, pyproj.Proj(proj='aea +over', lat1=f.bounds[3], lat2=f.bounds[1], lat0=(f.bounds[1]+f.bounds[3])/2,
+			lon0=0.0)), f).area)
 
-		self._areas = calc_areas(geometries) / 1000000.0
+		self._areas = np.nan_to_num(calc_areas(geometries))
+
 
 		return self._areas
 
@@ -545,7 +565,7 @@ class Field(object):
 		# map to the same variable dimension then we have a discrete points dataset, otherwise a gridded dataset
 
 		# Get geometry array
-		geometries = self.geometries()
+		bounds, geometries = self.geometries()
 
 		# If we want areas then get them
 		if add_areas:
@@ -582,8 +602,8 @@ class Field(object):
 			feature['properties']['_id'] = id
 
 			# Add ancilary variable properties
-			for name, var in self.ancil_variables.items():
-				feature['properties'][name] = var[1].ndarray().flatten()[id]
+#			for name, var in self.ancil_variables.items():
+#				feature['properties'][name] = var[1].ndarray().flatten()[id]
 
 			# Optionally add an area property
 			if add_areas:
@@ -635,6 +655,13 @@ class Field(object):
 		if coordinate in self.coordinate_variables:
 			mapping, coordinate_variable = self.coordinate_variables[coordinate]
 
+			# Deal with time correctly
+			if coordinate == 'time':
+				coordinate_values = self.times
+
+			else:
+				coordinate_values = coordinate_variable.ndarray()
+
 
 		# Geometry mapping uses ordered union of latitude and longitude maps
 		elif coordinate == 'geometry':
@@ -645,39 +672,20 @@ class Field(object):
 			else:
 				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
 
-			coordinate_variable = self.geometries()
-
-
-		else:
-			raise FieldError("Can't find coordinate {} for groupby: {}".format(coordinate, repr(self.coordinate_variables)))
-
-
-		# If coordinate is time then we specifically call the time method
-		if coordinate == 'time':
-			coordinate_values = self.times
-
-		else:
-			coordinate_values = coordinate_variable[:]
+			coordinate_values = self.geometries()
 
 
 		# Apply grouping function to coordinate values
-		groupby = dict()
-		groupby['coordinate'] = coordinate_variable
-		groupby['groups'] = func(coordinate_values, **args)
-
-		#print(groups, weights)
+		groupby = GroupBy(coordinate, func(coordinate_values, **args))
 
 		# We are going to need to construct slices on the original field
 		s = [slice(None)] * len(self.shape)
 
 		# Process each group
-		for key, group in groupby['groups'].items():
+		for key, group in groupby.groups.items():
 
 			for dim in mapping:
-#				print(dim, group['subset'], mapping, mapping.index(dim))
-				s[dim] = group['subset'][mapping.index(dim)]
-
-			#print('groupby1', key, mapping, group, s)
+				s[dim] = group.slices[mapping.index(dim)]
 
 			# Try and simplify continuous monotonic sequence to a slice
 			for dim in mapping:
@@ -685,11 +693,9 @@ class Field(object):
 				if isinstance(s[dim], list) and (s[dim][-1] - s[dim][0] + 1) == len(s[dim]):
 					s[dim] = slice(s[dim][0], s[dim][-1] + 1)
 
-
 			# Save the slices for this group
-			groupby['groups'][key]['subset'] = copy.copy(s)
-			groupby['groups'][key]['weights'] = group['weights']
-			#print('groupby2', key, groups[key])
+			group.slices = copy.copy(s)
+			group.weights = np.array(group.weights)
 
 
 		return groupby
@@ -723,71 +729,103 @@ class Field(object):
 			raise Exception('Function {} is not available in functions module'.format(funcname))
 
 
-		# First check if we can get the coordinate variable
-		if groupby['coordinate'].name in self.coordinate_variables:
-			mapping, coordinate_variable = self.coordinate_variables[groupby['coordinate'].name]
+		# Find the coordinate mapping for the request coordinate, if it exists
+		if groupby.source in self.coordinate_variables:
+			mapping, coordinate_variable = self.coordinate_variables[groupby.source]
 
-		else:
-			raise FieldError("Can't find coordinate {} in field for groupby method".format(groupby['coordinate']))
+			# Deal with time correctly
+			if groupby.source == 'time':
+				coordinate_values = self.times
+
+			else:
+				coordinate_values = coordinate_variable.ndarray()
+
+
+		# Geometry mapping uses ordered union of latitude and longitude maps
+		elif groupby.source == 'geometry':
+
+			if self.coordinate_variables['latitude'] == self.coordinate_variables['longitude'][0]:
+				mapping = self.coordinate_variables['latitude'][0]
+
+			else:
+				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
+
+			bounds, coordinate_values = self.geometries()
+
+		mapping = tuple(mapping)
 
 		# Currently can't apply on multi-dimensional coordinate variables
-		if len(mapping) > 1:
-			raise FieldError("Can't apply on multi-dimensional coordinate variables")
+		#if len(mapping) > 1:
+		#	raise FieldError("Can't apply on multi-dimensional coordinate variables")
 
-		# The new variable with have the same dimensions except for the grouping coordinate which is replaced
-		# by the group size
 
-		dimensions = list(self.variable.dimensions)
-		dimensions[mapping[0]] = Dimension(self.variable.dimensions[mapping[0]].name, len(groupby['groups']))
+		# Replace grouping dimensions by a single dimension of size equal to the number of groups
+		dimensions = []
+		for axis in range(len(self.shape)):
 
-		# Create the variable using numpy storage for now
-		variable = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
-		variables = {self.variable.name: variable}
+			if axis in mapping:
+				if axis == mapping[0] and len(groupby.groups) > 1:
+					dimensions.append(Dimension(groupby.source, len(groupby.groups)))
+
+			else:
+				dimensions.append(copy.copy(self.variable.dimensions[axis]))
+
+		slices = [slice(None)]*len(dimensions)
+		print('dimensions', dimensions)
+
+		# Create the new data variable using numpy storage for now
+		datavar = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
+		variables = {self.variable.name: datavar}
+		print('datavar', datavar)
 
 		# Now we create the coordinate variables which are just references to the existing coordinate
 		# variables except for the grouping coordinate which needs to be a new variable
 		for name, var in self.coordinate_variables.items():
 
-			print name, var, var[1].name
-			if name == coordinate_variable.name:
+			if name == groupby.source:
 				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, var[1].name, attributes=var[1].attributes)
 
 			else:
-				variables[var[1].name] = var[1]
+				if not set(var[0]).issubset(mapping):
+					variables[var[1].name] = var[1]
 
 
 		# Reference the ancilary variables in the same way
-		for name, var in self.ancil_variables.items():
-			variables[name] = var[1]
+		#for name, var in self.ancil_variables.items():
+		#	variables[name] = var[1]
 
+#		print(variables)
 
 		# Now we actually iterate through the groups applying the function and writing results to the
 		# the new variable and coordinate values to the new coordinate variable
 		i = 0
-		for key, group in groupby['groups'].items():
+		for key, group in groupby.groups.items():
 
 			# Get the subset and the weights for this group
-			subset = group['subset']
-			mask = group['weights']
+			subset = group.slices
+			weights = group.weights
+
+			# Reshape the weights so we can broadcast to the data shape
+			weights_shape = [1]*len(group.slices)
+			for axis in mapping:
+				weights_shape[axis] = weights.shape[mapping.index(axis)]
+
+			weights = weights.reshape(weights_shape)
+
+			# We may have dropped the mapping dimension if there is only one group
+			if mapping[0] < len(slices):
+				slices[mapping[0]] = i
 
 			# Apply the funcion and assign to the new variable
-			now = timing.time()
-
-			variable[i] = func(self.variable[subset].ndarray(), axis=tuple(mapping), **kwargs)
-			print(variable[i].shape)
-
-			print("{} took {} ms".format(key, (timing.time() - now)*1000))
-
-			# Extract the last coordinate value from the original coordinate variable for this group
-			if isinstance(subset[mapping[0]], slice):
-				variables[coordinate_variable.name][i] = coordinate_variable[[subset[mapping[0]].stop - 1]].ndarray()
-
+			if len(mapping) == 1:
+				axis = mapping[0]
 			else:
-				variables[coordinate_variable.name][i] = coordinate_variable[[subset[mapping[0]]]][-1].ndarray()
+				axis = mapping
 
-			#print(variables[groupby.coordinate][i].ndarray())
+			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis)
 
-			# Next group
+			variables[groupby.source] = key
+
 			i += 1
 
 
@@ -795,4 +833,4 @@ class Field(object):
 		dataset = Dataset(dimensions=dimensions, attributes=self.variable.dataset.attributes, variables=variables)
 
 		# Return the dataset and a new field
-		return dataset, self.__class__(variable)
+		return dataset, self.__class__(datavar)

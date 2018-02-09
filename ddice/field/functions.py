@@ -35,8 +35,12 @@ def generic(func, values, axis=0, above=None, below=None):
 def total(values, **kwargs):
 	return generic(np.ma.sum, values, **kwargs)
 
+# np.ma.mean doesn't support tuples for axis so we convert to non masked array first
 def mean(values, **kwargs):
-	return generic(np.ma.mean, values, **kwargs)
+
+	values = np.ma.filled(values, 0.0)
+
+	return generic(np.mean, values, **kwargs)
 
 def max(values, **kwargs):
 	return generic(np.ma.max, values, **kwargs)

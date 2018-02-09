@@ -34,8 +34,8 @@ def real_slices(shape, slices=()):
 
 			if start < 0:
 				start = 0
-			if stop > shape[i]:
-				stop = shape[i]
+#			if stop > shape[i]:
+#				stop = shape[i]
 			if stop < 0:
 				stop = shape[i] + stop
 
@@ -70,6 +70,7 @@ def reslice(shape, slices, newslices):
 
 	# First get rationalized real slices
 	slices = list(real_slices(shape, slices))
+
 
 	# Default shape is the original shape
 	newshape = list(shape)
