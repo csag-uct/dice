@@ -1,8 +1,9 @@
 import netCDF4
 import numpy as np
+import sys
 import glob
 
-from ddice.array import Array
+from ddice.array import Array, tiledArray
 from ddice.array import reslice
 from ddice.variable import Dimension, Variable
 
@@ -14,9 +15,9 @@ class netCDF4Array(Array):
 	A netCDF4 file base array store
 	"""
 
-	def __init__(self, ncvar):
+	def __init__(self, ncvar, dtype=None):
 
-		super(netCDF4Array, self).__init__(ncvar.shape, ncvar.datatype)
+		super(netCDF4Array, self).__init__(ncvar.shape, ncvar.dtype)
 		self._data = ncvar
 
 #	def __setitem__(self, slices, values):
@@ -37,12 +38,14 @@ class netCDFVariable(Variable, object):
 	A netCDF4 file based variable
 	"""
 
-	def __init__(self, dimensions, dtype, name=None, attributes={}, dataset=None, data=None):
+	def __init__(self, dimensions, dtype, name=None, attributes={}, dataset=None, data=None, storage=netCDF4Array):
 		"""
 		Just call the parent class constructor but force storage to be netCDF4Array
 		"""
+		if data != None and storage == None:
+			storage = data._storage
 
-		super(netCDFVariable, self).__init__(dimensions, dtype, name=name, attributes=attributes, dataset=dataset, data=data, storage=netCDF4Array)
+		super(netCDFVariable, self).__init__(dimensions, dtype, name=name, attributes=attributes, dataset=dataset, data=data, storage=storage)
 
 #	@property
 #	def dimensions(self):
@@ -66,7 +69,7 @@ class netCDF4Dataset(Dataset):
 	A netCDF dataset implementation using the netCDF4 python module
 	"""
 
-	def __init__(self, uri=None, dataset=None, dimensions=(), attributes={}, variables={}):
+	def __init__(self, uri=None, dataset=None, dimensions=(), attributes={}, variables={}, aggdim='time'):
 		"""
 		>>> ds = netCDF4Dataset(uri='ddice/testing/test.nc', dataset=Dataset(variables={'test1':Variable((('x', 5),('y',3)), float, attributes={'name':'test'})}, attributes={'test':'true'}))
 		>>> print(ds.dimensions)
@@ -106,7 +109,6 @@ class netCDF4Dataset(Dataset):
 
 		# At a minimum we need a list of dimensions to create a dataset
 		if dimensions:
-
 			try:
 				self._ds = netCDF4.Dataset(uri, mode='w')
 			except:
@@ -157,14 +159,25 @@ class netCDF4Dataset(Dataset):
 		# If we dont' have an existing Dataset instance or a list of dimensions we must be opening an existing uri
 		else:
 
+			# Get files list
+			files = glob.glob(uri)
+			files.sort()
+
+			print(files[0])
 			# Open the first one... first
 			try:
-				self._ds = netCDF4.Dataset(uri, mode='r')
+				self._ds = netCDF4.Dataset(files[0])
 			except:
-				raise DatasetError("Can't open dataset {}".format(uri))
+				raise DatasetError("Can't open dataset {}, {}".format(uri, sys.exc_info()))
 
 			for name, dim in self._ds.dimensions.items():
-				self._dimensions.append(Dimension(name, len(dim)))
+
+				if name == aggdim:
+					fixed = False
+				else:
+					fixed = True
+
+				self._dimensions.append(Dimension(name, len(dim), fixed=fixed))
 
 			for name in self._ds.ncattrs():
 				self._attributes[name] = self._ds.getncattr(name)
@@ -177,13 +190,81 @@ class netCDF4Dataset(Dataset):
 						if dim.name == name:
 							dims.append(dim)
 
-
 				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
 
-				self._variables[varname] = netCDFVariable(dims, var.datatype, name=varname, attributes=attrs, data=netCDF4Array(var), dataset=self)
-				#self._variables[varname] = Variable(dims, var.datatype, varname, attrs, data=var[:], dataset=self)
+				#self._variables[varname] = netCDFVariable(dims, var.datatype, name=varname, attributes=attrs, data=netCDF4Array(var), dataset=self)
+				print attrs
+
+				index = tuple([0]*len(var.shape))
+				bounds = [(0,var.shape[i]) for i in range(len(var.shape))]
+				tiledata = netCDF4Array(var)
+
+				tiles = {index: {'bounds': bounds, 'data':tiledata}}
+
+				data = tiledArray(var.shape, var.datatype, tiles=tiles)
+
+				self._variables[varname] = netCDFVariable(dims, var.dtype, name=varname, attributes=attrs, data=data, storage=tiledArray, dataset=self)
+
+			# Now try open the other files
+			file_number = 1
+			for file in files[1:]:
+
+				print(file)
+
+				try:
+					ds = netCDF4.Dataset(file)
+				except:
+					continue
+
+				# Increase size of aggdim
+				for name in ds.dimensions:
+					for dim in self._dimensions:
+						if dim.name == name and name == aggdim:
+								original_size = dim.size
+								dim.size += ds.dimensions[name].size
 
 
+				# Now add each variable
+				for varname, thisvar in ds.variables.items():
+
+					# If this variable doesn't use aggdim then we can ignore it
+					if aggdim not in thisvar.dimensions:
+						continue
+
+					#print('__init__', varname)
+
+					# Construct the dimensions list using the dataset dimensions
+					dims = []
+					for name in thisvar.dimensions:
+						for dim in self._dimensions:
+							if dim.name == name:
+								dims.append(dim)
+
+					index = [0]*len(thisvar.shape)
+					index[0] = file_number
+					index = tuple(index)
+					#print('index = ', index)
+
+					var = self.variables[varname]
+					tiles = var._data._tiles
+
+					bounds = [(0,d.size) for d in dims]
+					bounds[0] = (original_size, bounds[0][1])
+					shape = tuple([d.size for d in dims])
+
+					#print('shape', var.shape, thisvar.shape, shape)
+
+					tiledata = netCDF4Array(thisvar)
+
+					tiles[index] = {'bounds': bounds, 'data':tiledata}
+
+					#print(index, tiles[index])
+
+					data = tiledArray(shape, var.dtype, tiles=tiles)
+
+					self._variables[varname] = netCDFVariable(dims, thisvar.dtype, name=varname, attributes=var.attributes, data=data, storage=tiledArray, dataset=self)
+
+					#print self.variables[varname]
 
 
 	def makefield(self):

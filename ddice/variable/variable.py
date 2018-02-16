@@ -214,6 +214,6 @@ class Variable(object):
 		for d, size in zip(self.dimensions, data.shape):
 			dims.append(Dimension(d.name, size, d.fixed))
 
-		result = self.__class__(dims, data.dtype, name=self.name, attributes=self.attributes, dataset=self.dataset, data=data)
+		result = self.__class__(dims, data.dtype, name=self.name, attributes=self.attributes, dataset=self.dataset, data=data, storage=numpyArray)
 
 		return result

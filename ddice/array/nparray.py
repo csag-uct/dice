@@ -73,9 +73,9 @@ class numpyArray(Array):
 		>>> a = numpyArray((16,20), dtype=np.float32)
 		>>> a[:] = np.arange(320).reshape((16,20))
 		>>> a.apply('mean')
-		[ 159.5]
+		[159.5]
 		>>> a[:,:5].apply('mean', axis=0)
-		[[ 150.  151.  152.  153.  154.]]
+		[[150.0 151.0 152.0 153.0 154.0]]
 
 		"""
 

@@ -23,17 +23,38 @@ class Array(object):
 
 		self.dtype = dtype
 
-		# Arrays may share a data store but apply different views or subsets
+		# Initialize the view
 		self._view = real_slices(shape)
 
 
 	@property
 	def shape(self):
+		"""
+		Calculate the shape of the array considering the current view on the data
+		"""
 
 		result = []
-		for s in self._view:
+
+		# Step through views axes
+		for i in range(len(self._view)):
+
+			s = self._view[i]
+
+			# Calculate length of a slice
 			if isinstance(s, slice):
-				result.append(s.stop - s.start)
+
+				start, stop, step = s.start, s.stop, s.step
+
+				if start == None:
+					start = 0
+				if stop == None:
+					stop = self._shape[i]
+				if step == None:
+					step = 1
+
+				result.append((stop - start)/step)
+
+			# or get the length of a list
 			else:
 				result.append(len(s))
 
@@ -41,27 +62,31 @@ class Array(object):
 
 
 	def __getitem__(self, slices):
+		"""
+		The __getitem__ method is implemented by creating a new array that references
+		the same data but has a different view.
+		"""
 
 		shape, view = reslice(self._shape, self._view, slices)
 
 		result = self.__class__(shape, self.dtype)
 		result._view = view
-		
+
 		return result
 
 
 	def __setitem__(self, slices, values):
-		
+
 		# Combine slices with the view to get data indices
 		shape, slices = reslice(self._shape, self._view, slices)
-		
+
 		self._data[slices] = values
 
 
 
 	def ndarray(self):
 		"""
-		Return an ndarray version of the array data.  
+		Return an ndarray version of the array data.
 		If array has no data then an empty nparray of the correct dtype is returned
 		"""
 
@@ -70,6 +95,7 @@ class Array(object):
 			self._data = np.empty(self.shape, dtype=self.dtype)
 
 		return self._data.__getitem__(self._view)
+
 
 
 	@classmethod

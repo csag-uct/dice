@@ -18,7 +18,7 @@ class tiledArray(Array):
 	"""
 
 
-	def __init__(self, shape, dtype, tilespec=None, storage=numpyArray):
+	def __init__(self, shape, dtype, tilespec=None, tiles=None, storage=numpyArray):
 		"""
 		Create an instance of a tiled Array.  Sets up the tile dictionary and tile bounds arrays
 		but doesn't allocate and storage as allocation is lazy
@@ -31,12 +31,12 @@ class tiledArray(Array):
 
 		super(tiledArray, self).__init__(shape, dtype)
 
-		# If no tilespec then (for now) we create one big tile
-		if tilespec == None:
-			self._tilespec = [[size] for size in shape]
+		# If a full tile dictionary is provided then use it
+		if isinstance(tiles, dict):
+			self._tiles = tiles
 
 		# Otherwise we make sure each set of bounds doesn't start at zero and ends at size
-		else:
+		elif tilespec != None:
 
 			self._tilespec = tilespec
 
@@ -54,8 +54,13 @@ class tiledArray(Array):
 				if self._tilespec[d][-1] > shape[d]:
 					self._tilespec[d][-1] = shape[d]
 
+			self._tiles = self._make_tiles(self.shape, self._tilespec)
 
-		self._tiles = self._make_tiles(self.shape, self._tilespec)
+		# If no tilespec then (for now) we create one big tile
+		else:
+			self._tilespec = [[size] for size in shape]
+			self._tiles = self._make_tiles(self.shape, self._tilespec)
+
 		self._storage = storage
 
 
@@ -106,17 +111,20 @@ class tiledArray(Array):
 		>>> a.tiles((slice(8,-2), [2,8,19])).keys()
 		[(1, 3), (2, 1), (2, 0), (2, 3), (1, 0), (1, 1)]
 		"""
+		#print("tiles")
+		if slices == None:
+			slices = self._view
 
 		slices = real_slices(self.shape, slices)
 
 		result = dict()
 
 		for index, tile in self._tiles.items():
-
+			#print(index, tile)
 			intersect = True
 
 			for d in range(len(self.shape)):
-
+				#print(d)
 				bounds = tile['bounds'][d]
 
 				if isinstance(slices[d], slice):
@@ -138,13 +146,13 @@ class tiledArray(Array):
 
 		slices = real_slices(self.shape, slices)
 
-		for d in range(len(slices)):
+		for dim in range(len(slices)):
 
-			tile_start = max(slices[dim].start - tile['ranges'][dim,0], 0)
-			tile_stop = min(slices[dim].stop - tile['ranges'][dim,0], tile['ranges'][dim,1] - tile['ranges'][dim,0])
+			tile_start = max(slices[dim].start - tile['bounds'][dim][0], 0)
+			tile_stop = min(slices[dim].stop - tile['bounds'][dim][0], tile['bounds'][dim][1] - tile['bounds'][dim][0])
 
-			data_start = max(tile['ranges'][dim,0] - slices[dim].start, 0)
-			data_stop = min(slices[dim].stop - slices[dim].start, tile['ranges'][dim,1] - slices[dim].start)
+			data_start = max(tile['bounds'][dim][0] - slices[dim].start, 0)
+			data_stop = min(slices[dim].stop - slices[dim].start, tile['bounds'][dim][1] - slices[dim].start)
 
 			tile_slices.append(slice(tile_start, tile_stop))
 			data_slices.append(slice(data_start, data_stop))
@@ -155,18 +163,18 @@ class tiledArray(Array):
 
 	def __setitem__(self, slices, values):
 		""" Set values from the specified slices of the array
-		>>> #a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
-		>>> #a[0:16,0:20] = 42.0
-		>>> #a[7,17]
+		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=[[5,10,15],[5,10,15]])
+		>>> a[0:16,0:20] = 42.0
+		>>> a[7,17]
 		[[ 42.]]
 		"""
 
 		# Iterate through all tiles intersecting slices
-		for index in self.find_tiles(slices):
+		for index in self.tiles(slices):
 
-			tile = self.tiles[index]
+			tile = self._tiles[index]
 
-			tileshape = tuple(tile['ranges'][:,1] - tile['ranges'][:,0])
+			tileshape = tuple([b[1] - b[0] for b in tile['bounds']])
 			tile_slices, data_slices = self._tile_slices(tile, slices)
 
 
@@ -188,21 +196,23 @@ class tiledArray(Array):
 		""" Get values from the specified slices of the array and return a new instance that
 		references the original tiledArray.  Essentially returns a new view of the original
 
-		>>> #a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
-		>>> #a[7:14,3:12] = 42.0
-		>>> #a[7,2:5]
+		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=[[5,10,15],[5,10,15]])
+		>>> a[7:14,3:12] = 42.0
+		>>> a[7,2:5]
 		[[ nan  42.  42.]]
 		"""
+		#print("__getitem__")
 
 		shape, view = reslice(self.shape, self._view, slices)
 
-		result = self.__class__(shape, self.dtype, tilespec=self._tilespec)
+		result = self.__class__(shape, self.dtype)
 		result._view = view
 
-		result.tiles = dict()
+		result._tiles = dict()
 
-		for index in self.find_tiles(view):
-			result.tiles[index] = self.tiles[index]
+		for index in self.tiles(view):
+			#print(index, self._tiles[index])
+			result._tiles[index] = self._tiles[index]
 
 		return result
 
@@ -210,14 +220,14 @@ class tiledArray(Array):
 	def ndarray(self, astype=None):
 		""" Returns a copy, default type is numpy ndarray of the array
 
-		>>> #a = tiledArray((16,20), dtype=np.float32, tilespec=(5,5))
-		>>> #a[:] = np.arange(320).reshape((16,20))
-		>>> #a[7,2:5]
+		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=[[5,10,15],[5,10,15]])
+		>>> a[:] = np.arange(320).reshape((16,20))
+		>>> a[7,2:5]
 		[[ 142.  143.  144.]]
-		>>> #a[7,2:5] = 96
-		>>> #a[6:7,0:5]
+		>>> a[7,2:5] = 96
+		>>> a[6:7,0:5]
 		[[ 120.  121.  122.  123.  124.]]
-		>>> #a[6:7,0:5][:,1:3]
+		>>> a[6:7,0:5][:,1:3]
 		[[ 121.  122.]]
 		"""
 
@@ -226,9 +236,9 @@ class tiledArray(Array):
 		else:
 			result = np.empty(self.shape, dtype=self.dtype)
 
-		for index in self.tiles:
+		for index in self.tiles():
 
-			tile = self.tiles[index]
+			tile = self._tiles[index]
 
 			tile_slices, data_slices = self._tile_slices(tile, self._view)
 

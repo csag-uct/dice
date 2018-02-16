@@ -791,8 +791,8 @@ class Field(object):
 
 
 		# Reference the ancilary variables in the same way
-		#for name, var in self.ancil_variables.items():
-		#	variables[name] = var[1]
+		for name, var in self.ancil_variables.items():
+			variables[name] = var[1]
 
 #		print(variables)
 
@@ -822,7 +822,10 @@ class Field(object):
 			else:
 				axis = mapping
 
-			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis)
+			# Get the required shape, this is just to deal with extra dimensions of size 1
+			thisshape = datavar[slices].shape
+
+			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
 
 			variables[groupby.source] = key
 
