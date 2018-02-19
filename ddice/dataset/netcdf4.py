@@ -160,10 +160,13 @@ class netCDF4Dataset(Dataset):
 		else:
 
 			# Get files list
-			files = glob.glob(uri)
-			files.sort()
+			if isinstance(uri, str):
+				files = glob.glob(uri)
+				files.sort()
 
-			print(files[0])
+			else:
+				files = uri
+
 			# Open the first one... first
 			try:
 				self._ds = netCDF4.Dataset(files[0])
@@ -192,9 +195,6 @@ class netCDF4Dataset(Dataset):
 
 				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
 
-				#self._variables[varname] = netCDFVariable(dims, var.datatype, name=varname, attributes=attrs, data=netCDF4Array(var), dataset=self)
-				print attrs
-
 				index = tuple([0]*len(var.shape))
 				bounds = [(0,var.shape[i]) for i in range(len(var.shape))]
 				tiledata = netCDF4Array(var)
@@ -208,8 +208,6 @@ class netCDF4Dataset(Dataset):
 			# Now try open the other files
 			file_number = 1
 			for file in files[1:]:
-
-				print(file)
 
 				try:
 					ds = netCDF4.Dataset(file)
