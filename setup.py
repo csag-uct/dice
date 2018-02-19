@@ -10,8 +10,10 @@ setup(name='ddice',
       packages=['ddice'],
       install_requires=[
           'netCDF4',
+          'cfunits',
           'numpy',
           'shapely',
+          'fiona',
           'pyproj'
       ],
       zip_safe=False)
