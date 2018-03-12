@@ -71,20 +71,13 @@ def year(values):
 	return generic1d(values, keyfunc)
 
 
-def rollingwindow(values, windowsize=10):
+def julian(values, windowsize=1):
 
-	groups = OrderedDict()
+	def keyfunc(value):
+		return int(value.strftime('%j')), 1
 
-	for i in range(0, values.shape[0] - windowsize):
+	return generic1d(values, keyfunc)
 
-		key = values[i+windowsize/2]
-
-		if key not in result.keys():
-			groups[key] = Group()
-
-		groups[key].subset = np.arange(i, i+windowsize)
-
-	return groups
 
 
 def geometry(source, target=None, key_property=None, areas=False):

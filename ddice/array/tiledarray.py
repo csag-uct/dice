@@ -144,19 +144,35 @@ class tiledArray(Array):
 
 		tile_slices, data_slices = [], []
 
+		#print(tile, slices)
+
 		slices = real_slices(self.shape, slices)
 
 		for dim in range(len(slices)):
 
-			tile_start = max(slices[dim].start - tile['bounds'][dim][0], 0)
-			tile_stop = min(slices[dim].stop - tile['bounds'][dim][0], tile['bounds'][dim][1] - tile['bounds'][dim][0])
+			if isinstance(slices[dim], slice):
 
-			data_start = max(tile['bounds'][dim][0] - slices[dim].start, 0)
-			data_stop = min(slices[dim].stop - slices[dim].start, tile['bounds'][dim][1] - slices[dim].start)
+				tile_start = max(slices[dim].start - tile['bounds'][dim][0], 0)
+				tile_stop = min(slices[dim].stop - tile['bounds'][dim][0], tile['bounds'][dim][1] - tile['bounds'][dim][0])
 
-			tile_slices.append(slice(tile_start, tile_stop))
-			data_slices.append(slice(data_start, data_stop))
+				data_start = max(tile['bounds'][dim][0] - slices[dim].start, 0)
+				data_stop = min(slices[dim].stop - slices[dim].start, tile['bounds'][dim][1] - slices[dim].start)
 
+				tile_slices.append(slice(tile_start, tile_stop))
+				data_slices.append(slice(data_start, data_stop))
+
+			else:
+
+				tile_slice = slices[dim][np.logical_and(slices[dim] >= tile['bounds'][dim][0], slices[dim] < tile['bounds'][dim][1])]
+				tile_slice -= tile['bounds'][dim][0]
+
+				data_slice = slices[dim][np.logical_and(slices[dim] >= tile['bounds'][dim][0], slices[dim] < tile['bounds'][dim][1])]
+				data_slice = np.arange(len(data_slice))
+
+				tile_slices.append(tile_slice)
+				data_slices.append(data_slice)
+
+		#print(self.shape, tile_slices, data_slices)
 
 		return tile_slices, data_slices
 
@@ -168,6 +184,7 @@ class tiledArray(Array):
 		>>> a[7,17]
 		[[ 42.]]
 		"""
+		#print("__setitem__", self.shape, slices)
 
 		# Iterate through all tiles intersecting slices
 		for index in self.tiles(slices):
@@ -201,7 +218,7 @@ class tiledArray(Array):
 		>>> a[7,2:5]
 		[[ nan  42.  42.]]
 		"""
-		#print("__getitem__")
+		#print("__getitem__", self.shape, slices)
 
 		shape, view = reslice(self.shape, self._view, slices)
 
@@ -230,6 +247,7 @@ class tiledArray(Array):
 		>>> a[6:7,0:5][:,1:3]
 		[[ 121.  122.]]
 		"""
+		#print("ndarray", self.shape)
 
 		if astype != None:
 			result = astype(self.shape, dtype=self.dtype, tilespec=tuple(outshape))

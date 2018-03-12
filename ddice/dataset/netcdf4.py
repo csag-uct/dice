@@ -171,7 +171,7 @@ class netCDF4Dataset(Dataset):
 			try:
 				self._ds = netCDF4.Dataset(files[0])
 			except:
-				raise DatasetError("Can't open dataset {}, {}".format(uri, sys.exc_info()))
+				raise DatasetError("Can't open dataset {}, {}".format(files[0], sys.exc_info()))
 
 			for name, dim in self._ds.dimensions.items():
 

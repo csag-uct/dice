@@ -691,9 +691,9 @@ class Field(object):
 
 			# Try and simplify continuous monotonic sequence to a slice
 			for dim in mapping:
-
-				if isinstance(s[dim], list) and (s[dim][-1] - s[dim][0] + 1) == len(s[dim]):
-					s[dim] = slice(s[dim][0], s[dim][-1] + 1)
+				if isinstance(s[dim], list):
+					if s[dim][-1] - s[dim][0] + 1 == len(s[dim]):
+						s[dim] = slice(s[dim][0], s[dim][-1] + 1)
 
 			# Save the slices for this group
 			group.slices = copy.copy(s)
@@ -826,6 +826,7 @@ class Field(object):
 
 			# Get the required shape, this is just to deal with extra dimensions of size 1
 			thisshape = datavar[slices].shape
+			print(subset)
 
 			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
 

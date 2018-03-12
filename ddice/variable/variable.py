@@ -122,6 +122,8 @@ class Variable(object):
 			else:
 				raise TypeError('{} is not a 2-tuple (name, size) or a Dimension instance'.format(d))
 
+
+
 		# Dimensions are immutable so turn the list into a tuple
 		self._dimensions = tuple(self._dimensions)
 
@@ -143,8 +145,11 @@ class Variable(object):
 
 			# If storage is different then we need to recreate the data using the requested storage
 			else:
+				#print("Variable.__init__", self.shape, self.name, storage)
 				self._data = storage(self.shape, dtype)
-				self._data[:] = data.ndarray()
+
+				if len(self.shape):
+					self._data[:] = data.ndarray()
 
 
 		elif isinstance(data, np.ndarray) or isinstance(data, np.ma.MaskedArray):
@@ -207,7 +212,7 @@ class Variable(object):
 		self._data[slices] = values
 
 	def __getitem__(self, slices):
-
+		print("__getitem__", self.name, slices)
 		data = self._data[slices]
 
 		dims = []

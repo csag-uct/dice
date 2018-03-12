@@ -90,7 +90,6 @@ def reslice(shape, slices, newslices):
 		# Convert slice instances to arrays
 		if isinstance(s, slice):
 			was = slice
-
 			start, stop, step = s.start, s.stop, s.step
 
 			if not start:
