@@ -135,8 +135,8 @@ class Variable(object):
 			if data.shape != self.shape:
 				raise Exception("supplied data Array has shape {}, Variable definition has shape {}".format(data.shape, self.shape))
 
-			if data.dtype != self.dtype:
-				raise Exception("supplied data Array has dtype {}, Variable definition has dtype {}".format(data.dtype, self.dtype))
+			#if data.dtype != self.dtype:
+			#	raise Exception("supplied data Array has dtype {}, Variable definition has dtype {}".format(data.dtype, self.dtype))
 
 			# If storage of data is the same as storage for this variable then just assign
 			if isinstance(data, storage):
@@ -145,7 +145,6 @@ class Variable(object):
 
 			# If storage is different then we need to recreate the data using the requested storage
 			else:
-				#print("Variable.__init__", self.shape, self.name, storage)
 				self._data = storage(self.shape, dtype)
 
 				if len(self.shape):
@@ -212,7 +211,7 @@ class Variable(object):
 		self._data[slices] = values
 
 	def __getitem__(self, slices):
-		print("__getitem__", self.name, slices)
+
 		data = self._data[slices]
 
 		dims = []

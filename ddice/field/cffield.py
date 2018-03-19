@@ -143,15 +143,19 @@ class CFField(Field):
 		defined units and calendar attributes on the time coordinate variable
 		"""
 
-		if 'calendar' in self.coordinate('time').attributes:
-			return netCDF4.num2date(self.coordinate('time').ndarray(),
-				                    self.coordinate('time').attributes['units'],
-				                    self.coordinate('time').attributes['calendar'])
+		if self.coordinate('time'):
+
+			if 'calendar' in self.coordinate('time').attributes:
+				return netCDF4.num2date(self.coordinate('time').ndarray(),
+					                    self.coordinate('time').attributes['units'],
+					                    self.coordinate('time').attributes['calendar'])
+
+			else:
+				return netCDF4.num2date(self.coordinate('time').ndarray(),
+					                    self.coordinate('time').attributes['units'])
 
 		else:
-			return netCDF4.num2date(self.coordinate('time').ndarray(),
-				                    self.coordinate('time').attributes['units'])
-
+			return None
 
 	@classmethod
 	def makefields(cls, dataset):

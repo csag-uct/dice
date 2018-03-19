@@ -218,8 +218,6 @@ class tiledArray(Array):
 		>>> a[7,2:5]
 		[[ nan  42.  42.]]
 		"""
-		#print("__getitem__", self.shape, slices)
-
 		shape, view = reslice(self.shape, self._view, slices)
 
 		result = self.__class__(shape, self.dtype)
@@ -228,13 +226,12 @@ class tiledArray(Array):
 		result._tiles = dict()
 
 		for index in self.tiles(view):
-			#print(index, self._tiles[index])
 			result._tiles[index] = self._tiles[index]
 
 		return result
 
 
-	def ndarray(self, astype=None):
+	def ndarray(self):
 		""" Returns a copy, default type is numpy ndarray of the array
 
 		>>> a = tiledArray((16,20), dtype=np.float32, tilespec=[[5,10,15],[5,10,15]])
@@ -247,10 +244,9 @@ class tiledArray(Array):
 		>>> a[6:7,0:5][:,1:3]
 		[[ 121.  122.]]
 		"""
-		#print("ndarray", self.shape)
 
-		if astype != None:
-			result = astype(self.shape, dtype=self.dtype, tilespec=tuple(outshape))
+		if self.dtype == str:
+			result = np.empty(self.shape, dtype=object)
 		else:
 			result = np.empty(self.shape, dtype=self.dtype)
 
@@ -270,8 +266,8 @@ class tiledArray(Array):
 
 		return result
 
-	def __repr__(self):
-		return str(self.ndarray())
+#	def __repr__(self):
+#		return str(self.ndarray())
 
 	def apply(self, func, axis=None):
 		"""Apply an array function along successive axes

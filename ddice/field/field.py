@@ -317,6 +317,9 @@ class Field(object):
 			else:
 				continue
 
+			# Get the coordinate variable values
+			vals = variable.ndarray()
+
 			# Time is a special case, convert the argument datetimes to time index values
 			if name == 'time':
 
@@ -327,10 +330,9 @@ class Field(object):
 
 				units = variable.attributes['units']
 
-				value = tuple([netCDF4.date2num(v, units, calendar) for v in value])
+#				value = tuple([netCDF4.date2num(v, units, calendar) for v in value])
+				vals = netCDF4.num2date(vals, units, calendar)
 
-			# Get the coordinate variable values
-			vals = variable.ndarray()
 
 			# str or unicode values
 			if isinstance(value[0], str) or isinstance(value[0], unicode):

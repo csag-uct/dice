@@ -89,7 +89,6 @@ class Array(object):
 		Return an ndarray version of the array data.
 		If array has no data then an empty nparray of the correct dtype is returned
 		"""
-
 		# Lazy allocation
 		if type(self._data) == bool and self._data == False:
 			self._data = np.empty(self.shape, dtype=self.dtype)

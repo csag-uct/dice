@@ -193,6 +193,7 @@ class netCDF4Dataset(Dataset):
 						if dim.name == name:
 							dims.append(dim)
 
+
 				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
 
 				index = tuple([0]*len(var.shape))
@@ -201,7 +202,7 @@ class netCDF4Dataset(Dataset):
 
 				tiles = {index: {'bounds': bounds, 'data':tiledata}}
 
-				data = tiledArray(var.shape, var.datatype, tiles=tiles)
+				data = tiledArray(var.shape, var.dtype, tiles=tiles)
 
 				self._variables[varname] = netCDFVariable(dims, var.dtype, name=varname, attributes=attrs, data=data, storage=tiledArray, dataset=self)
 

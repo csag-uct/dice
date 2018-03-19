@@ -16,6 +16,10 @@ class numpyArray(Array):
 
 	def __init__(self, shape, dtype):
 
+		# dtype of str needs to become dtype object to support variable length strings in numpy arrays
+		if dtype == str:
+			dtype = object
+
 		super(numpyArray, self).__init__(shape, dtype)
 
 		# We'll lazy allocate
