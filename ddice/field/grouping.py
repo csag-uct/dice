@@ -14,9 +14,9 @@ class Group(object):
 
 	def __init__(self, slices=None, weights=None, bounds=None):
 
-		self.slices = [[]] if slices == None else slices
-		self.weights = [] if weights == None else weights
-		self.bounds = [[]] if bounds == None else bounds
+		self.slices = [[]] if hasattr(slices, '__getitem__') else slices
+		self.weights = [] if hasattr(weight, '__getitem__') == None else weights
+		self.bounds = [[]] if hasattr(bounds, '__getitem__') == None else bounds
 
 
 def generic1d(values, keyfunc):

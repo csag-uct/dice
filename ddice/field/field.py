@@ -334,6 +334,7 @@ class Field(object):
 				vals = netCDF4.num2date(vals, units, calendar)
 
 
+
 			# str or unicode values
 			if isinstance(value[0], str) or isinstance(value[0], unicode):
 				mask = vals != value
