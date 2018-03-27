@@ -1,3 +1,4 @@
+import sys
 import netCDF4
 import numpy as np
 from collections import OrderedDict
@@ -5,18 +6,21 @@ from collections import OrderedDict
 from datetime import datetime as dt
 
 import fiona
-
+import pyproj
 from shapely.geometry import shape, asShape, Polygon
+from shapely.validation import explain_validity
 
 from copy import copy
 
 class Group(object):
 
-	def __init__(self, slices=None, weights=None, bounds=None):
+	def __init__(self, slices=None, weights=None, bounds=None, key_name=None):
 
-		self.slices = [[]] if hasattr(slices, '__getitem__') else slices
-		self.weights = [] if hasattr(weight, '__getitem__') == None else weights
-		self.bounds = [[]] if hasattr(bounds, '__getitem__') == None else bounds
+		self.slices = [[]] if not hasattr(slices, '__getitem__') else slices
+		self.weights = [] if not hasattr(weights, '__getitem__') else weights
+		self.bounds = [[]] if not hasattr(bounds, '__getitem__') else bounds
+
+		self.key_name = key_name
 
 
 def generic1d(values, keyfunc):
@@ -80,7 +84,7 @@ def julian(values, windowsize=1):
 
 
 
-def geometry(source, target=None, key_property=None, areas=False):
+def geometry(source, target=None, keyname=None, areas=False):
 
 	# Split out bounds and geometries array from source
 	bounds, source = source
@@ -100,19 +104,11 @@ def geometry(source, target=None, key_property=None, areas=False):
 
 			collection = [{
 				'geometry':asShape(Polygon([(-10,-90), (-10,90), (360, 90), (360,-90),(-10,-90)])),
-#				'geometry':asShape(Polygon([
-#					(bounds[0], bounds[1]),
-#					(bounds[0], bounds[3]),
-#					(bounds[1], bounds[3]),
-#					(bounds[1], bounds[1]),
-#					(bounds[0], bounds[1]),
-#				])),
 				'properties':{}
 			}]
 
 
 	intersects = OrderedDict()
-
 
 
   	# First gather all source geometries into each group
@@ -121,22 +117,30 @@ def geometry(source, target=None, key_property=None, areas=False):
 
   		geom = shape(feature['geometry'])
 
+		if keyname:
+			key = feature['properties'][keyname]
+		else:
+			key = tid
+
+		intersects[key] = []
+
   		sid = 0
   		for s in source:
 
-			if s.intersects(geom):
+  			try:
+				if s.intersects(geom):
 
-				intersection = s.intersection(geom).area/s.area
+					try:
+						intersection = s.intersection(geom).area/s.area
+					except:
+						print(geom.area, s.area)
+						intersection = 0.0
 
-				if key_property:
-					key = feature['properties'][key_property]
-				else:
-					key = tid
-
-				if key not in intersects:
-					intersects[key] = [(sid, intersection)]
-				else:
 					intersects[key].append((sid, intersection))
+			except:
+				print(explain_validity(s))
+				print(explain_validity(geom))
+				sys.exit(1)
 
 			sid += 1
 

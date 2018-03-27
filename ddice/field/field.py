@@ -24,11 +24,11 @@ import time as timing
 
 class GroupBy(object):
 
-	def __init__(self, source, groups):
+	def __init__(self, source, groups, keyname=None, **args):
 
 		self.source = source
 		self.groups = groups
-
+		self.keyname = keyname if keyname else source
 
 
 class FieldError(Exception):
@@ -446,6 +446,9 @@ class Field(object):
 		# Discrete point geometries
 		if len(result.shape) == 1:
 
+			# Restrict longitude to -180 180 range
+			longitudes[longitudes > 180] -= 360
+
 			if have_vertical:
 				locations = zip(list(longitudes), list(latitudes), list(vertical))
 
@@ -465,6 +468,7 @@ class Field(object):
 			latitude_bounds[1:-1,1:-1] = (latitudes[0:-1, 0:-1] + latitudes[1:,1:])/2
 			longitude_bounds[1:-1,1:-1] = (longitudes[0:-1, 0:-1] + longitudes[1:,1:])/2
 
+
 			for var in (latitude_bounds, longitude_bounds):
 
 				var[0,1:-1] = var[1,1:-1] - (var[2,1:-1] - var[1,1:-1])
@@ -473,6 +477,8 @@ class Field(object):
 				var[:,0] = var[:,1] - (var[:,2] - var[:,1])
 				var[:,-1] = var[:,-2] + (var[:,-2] - var[:,-3])
 
+			# Wrap to -180 to 180 longitude range
+			longitude_bounds[longitude_bounds > 180.0] -= 360
 
 			for index in np.ndindex(result.shape):
 
@@ -481,10 +487,19 @@ class Field(object):
 				for sub_index in [[0,0], [1,0], [1,1], [0,1], [0,0]]:
 					coords.append((longitude_bounds[tuple(np.array(index) + np.array(sub_index))], latitude_bounds[tuple(np.array(index) + np.array(sub_index))]))
 
-				result[index] = Polygon(coords)
+				# Split polygons that cross date line
+				lons = np.array([c[0] for c in coords])
 
+				if lons.max() - lons.min() > 180:
+					split1 = [c if c[0] > 0.0 else (180, c[1]) for c in coords]
+					split2 = [c if c[0] < 0.0 else (-180, c[1]) for c in coords]
+					geometry = MultiPolygon([Polygon(split1), Polygon(split2)])
 
-		# Cache this!
+				else:
+					geometry = Polygon(coords)
+
+				result[index] = geometry
+
 		self._geometries = result
 		self._bounds = (longitudes.min(), latitudes.min(), longitudes.max(), latitudes.max())
 
@@ -681,7 +696,7 @@ class Field(object):
 
 
 		# Apply grouping function to coordinate values
-		groupby = GroupBy(coordinate, func(coordinate_values, **args))
+		groupby = GroupBy(coordinate, func(coordinate_values, **args), **args)
 
 		# We are going to need to construct slices on the original field
 		s = [slice(None)] * len(self.shape)
@@ -770,7 +785,7 @@ class Field(object):
 
 			if axis in mapping:
 				if axis == mapping[0] and len(groupby.groups) > 1:
-					dimensions.append(Dimension(groupby.source, len(groupby.groups)))
+					dimensions.append(Dimension(groupby.keyname, len(groupby.groups)))
 
 			else:
 				dimensions.append(copy.copy(self.variable.dimensions[axis]))
