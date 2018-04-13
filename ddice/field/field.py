@@ -330,8 +330,8 @@ class Field(object):
 
 				units = variable.attributes['units']
 
-#				value = tuple([netCDF4.date2num(v, units, calendar) for v in value])
-				vals = netCDF4.num2date(vals, units, calendar)
+				value = tuple([netCDF4.date2num(v, units, calendar) for v in value])
+#				vals = netCDF4.num2date(vals, units, calendar)
 
 
 
@@ -785,7 +785,7 @@ class Field(object):
 
 			if axis in mapping:
 				if axis == mapping[0] and len(groupby.groups) > 1:
-					dimensions.append(Dimension(groupby.keyname, len(groupby.groups)))
+					dimensions.append(Dimension(groupby.source, len(groupby.groups)))
 
 			else:
 				dimensions.append(copy.copy(self.variable.dimensions[axis]))
@@ -844,10 +844,11 @@ class Field(object):
 
 			# Get the required shape, this is just to deal with extra dimensions of size 1
 			thisshape = datavar[slices].shape
-			print(subset)
 
+			# Apply the function to the subset with weights and reshape to the required shape
 			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
 
+			# Assign the new coordinate variable value which is the group key
 			variables[groupby.source] = key
 
 			i += 1
