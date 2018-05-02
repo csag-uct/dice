@@ -804,6 +804,7 @@ class Field(object):
 
 			if name == groupby.source:
 				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, var[1].name, attributes=var[1].attributes)
+				print(variables[var[1].name])
 
 			else:
 				if not set(var[0]).issubset(mapping):
@@ -814,7 +815,11 @@ class Field(object):
 		for name, var in self.ancil_variables.items():
 			variables[name] = var[1]
 
-#		print(variables)
+
+		# Construct new ancilary variables for the group properties
+#		for key in groupby.groups[groupby.groups.keys()[0]]['properties']:
+#			variables[key] = Variable(dimensions[-1], unicode, key)
+
 
 		# Now we actually iterate through the groups applying the function and writing results to the
 		# the new variable and coordinate values to the new coordinate variable
@@ -849,7 +854,13 @@ class Field(object):
 			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
 
 			# Assign the new coordinate variable value which is the group key
-			variables[groupby.source] = key
+			# Deal with time correctly
+			if groupby.source == 'time':
+				print(i, key)
+				key = netCDF4.date2num(key, variables[groupby.source].attributes['units'])
+				print(i, key)
+
+			variables[groupby.source][i] = key
 
 			i += 1
 

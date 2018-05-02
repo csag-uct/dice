@@ -14,13 +14,16 @@ from copy import copy
 
 class Group(object):
 
-	def __init__(self, slices=None, weights=None, bounds=None, key_name=None):
+	def __init__(self, slices=None, weights=None, bounds=None, key_name=None, properties=[]):
+
+		self.key_name = key_name
 
 		self.slices = [[]] if not hasattr(slices, '__getitem__') else slices
 		self.weights = [] if not hasattr(weights, '__getitem__') else weights
 		self.bounds = [[]] if not hasattr(bounds, '__getitem__') else bounds
 
-		self.key_name = key_name
+		self.properties = properties
+
 
 
 def generic1d(values, keyfunc):
@@ -70,7 +73,7 @@ def month(values):
 def year(values):
 
 	def keyfunc(value):
-		return dt(value.year,6,30), 1
+		return dt(value.year,12,31), 1
 
 	return generic1d(values, keyfunc)
 
@@ -92,14 +95,17 @@ def geometry(source, target=None, keyname=None, areas=False):
 	original_shape = source.shape
   	source = source.flatten()
 
+  	# Try and open the shapefile
 	try:
 		collection = fiona.open(target)
 
 	except:
 
+		# If we fail then check if target is already a list
 		if isinstance(target, list):
 			collection = target
 
+		# Finally resort to a global geometry target
 		elif target == None:
 
 			collection = [{
@@ -108,8 +114,9 @@ def geometry(source, target=None, keyname=None, areas=False):
 			}]
 
 
+	# This is going to hold our intersects (list of source ids and intersection) for each feature
 	intersects = OrderedDict()
-
+	properties = []
 
   	# First gather all source geometries into each group
   	tid = 0
@@ -117,26 +124,42 @@ def geometry(source, target=None, keyname=None, areas=False):
 
   		geom = shape(feature['geometry'])
 
+		# Use the keyname property if we have one
 		if keyname:
-			key = feature['properties'][keyname]
+
+			try:
+				key = feature['properties'][keyname]
+			except:
+				print("Error, cannot find key '{}' in:".format(keyname))
+				print(collection.schema['properties'].keys())
+				sys.exit(1)
 		else:
 			key = tid
 
+		print(key)
+
+		# Initialise intersects for this target feature
 		intersects[key] = []
 
+		# Now we loop through all the source geomoetries
   		sid = 0
   		for s in source:
 
   			try:
 				if s.intersects(geom):
 
+					# Calculate the intersection fraction
 					try:
 						intersection = s.intersection(geom).area/s.area
 					except:
-						print(geom.area, s.area)
+						print('WARNING, couldnt calculate intesersection area', geom.area, s.area)
 						intersection = 0.0
 
+					# Append the source id and intersection fraction
 					intersects[key].append((sid, intersection))
+
+			# Try and display some useful diags if intersects or intersection fails
+			# this usually relates to bad geometries
 			except:
 				print(explain_validity(s))
 				print(explain_validity(geom))
@@ -147,14 +170,18 @@ def geometry(source, target=None, keyname=None, areas=False):
 		tid += 1
 
 
+	# Now we are going to actually construct the groups to return
 	groups = OrderedDict()
 
-	# Now process each group into slices and weights
+	# Process each group into slices and weights
 	for key in intersects:
 
+		# Extract the source feature id, intersection fractions, and properties
 		indices = [i[0] for i in intersects[key]]
 		intersections = [i[1] for i in intersects[key]]
+		properties = [i[2] for i in intersects[key]]
 
+		# Construct the weights array
 		w = np.zeros(source.shape, dtype=np.float32)
 		w[indices] = np.array(intersections)
 
@@ -173,7 +200,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 		if isinstance(areas, np.ndarray):
 			w *= areas
 
-		groups[key] = Group(s, w[s]/w[s].sum(), [])
+		groups[key] = Group(s, w[s]/w[s].sum(), [], keyname, properties=properties)
 
 
 	return groups
