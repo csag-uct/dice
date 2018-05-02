@@ -791,12 +791,10 @@ class Field(object):
 				dimensions.append(copy.copy(self.variable.dimensions[axis]))
 
 		slices = [slice(None)]*len(dimensions)
-		print('dimensions', dimensions)
 
 		# Create the new data variable using numpy storage for now
 		datavar = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
 		variables = {self.variable.name: datavar}
-		print('datavar', datavar)
 
 		# Now we create the coordinate variables which are just references to the existing coordinate
 		# variables except for the grouping coordinate which needs to be a new variable
@@ -804,7 +802,6 @@ class Field(object):
 
 			if name == groupby.source:
 				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, var[1].name, attributes=var[1].attributes)
-				print(variables[var[1].name])
 
 			else:
 				if not set(var[0]).issubset(mapping):
@@ -817,8 +814,9 @@ class Field(object):
 
 
 		# Construct new ancilary variables for the group properties
-#		for key in groupby.groups[groupby.groups.keys()[0]]['properties']:
-#			variables[key] = Variable(dimensions[-1], unicode, key)
+#		if 'properties' in groupby.groups[groupby.groups.keys()[0]]:
+#			for key in groupby.groups[groupby.groups.keys()[0]]['properties']:
+#				variables[key] = Variable(dimensions[-1], unicode, key)
 
 
 		# Now we actually iterate through the groups applying the function and writing results to the
