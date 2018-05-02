@@ -856,9 +856,7 @@ class Field(object):
 			# Assign the new coordinate variable value which is the group key
 			# Deal with time correctly
 			if groupby.source == 'time':
-				print(i, key)
 				key = netCDF4.date2num(key, variables[groupby.source].attributes['units'])
-				print(i, key)
 
 			variables[groupby.source][i] = key
 
