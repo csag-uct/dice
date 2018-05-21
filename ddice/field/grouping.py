@@ -72,7 +72,7 @@ def month(values):
 def year(values):
 
 	def keyfunc(value):
-		return dt(value.year,6,30), 1
+		return dt(value.year,12,31), 1
 
 	return generic1d(values, keyfunc)
 
@@ -94,20 +94,24 @@ def geometry(source, target=None, keyname=None, areas=False):
 	original_shape = source.shape
   	source = source.flatten()
 
+  	# Try and open the shapefile
 	try:
 		collection = fiona.open(target)
 
 	except:
 
+		# If we fail then check if target is already a list
 		if isinstance(target, list):
 			collection = target
 
+		# Finally resort to a global geometry target
 		elif target == None:
 
 			collection = [{
 				'geometry':asShape(Polygon([(-10,-90), (-10,90), (360, 90), (360,-90),(-10,-90)])),
 				'properties':{}
 			}]
+
 
 
 	schema = collection.schema['properties']
@@ -129,22 +133,32 @@ def geometry(source, target=None, keyname=None, areas=False):
 		else:
 			key = tid
 
+		print(key)
+
+		# Initialise intersects for this target feature
 		intersects[key] = []
 
+		# Now we loop through all the source geomoetries
   		sid = 0
   		for s in source:
 
   			try:
 				if s.intersects(geom):
 
+					# Calculate the intersection fraction
 					try:
 						intersection = s.intersection(geom).area/s.area
 					except:
 						print("WARNING: error doing intersection, setting to zero..")
 						print(geom.area, s.area)
+
 						intersection = 0.0
 
+					# Append the source id and intersection fraction
 					intersects[key].append((sid, intersection))
+
+			# Try and display some useful diags if intersects or intersection fails
+			# this usually relates to bad geometries
 			except:
 				print(explain_validity(s))
 				print(explain_validity(geom))
@@ -155,14 +169,18 @@ def geometry(source, target=None, keyname=None, areas=False):
 		tid += 1
 
 
+	# Now we are going to actually construct the groups to return
 	groups = OrderedDict()
 
 	# Now process each group into slices and weights
 	for key in intersects.keys():
 
+		# Extract the source feature id, intersection fractions, and properties
 		indices = [i[0] for i in intersects[key]]
 		intersections = [i[1] for i in intersects[key]]
+		properties = [i[2] for i in intersects[key]]
 
+		# Construct the weights array
 		w = np.zeros(source.shape, dtype=np.float32)
 		w[indices] = np.array(intersections)
 

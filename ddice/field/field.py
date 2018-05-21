@@ -793,9 +793,12 @@ class Field(object):
 		slices = [slice(None)]*len(dimensions)
 
 
+
 		# Create the new data variable using numpy storage for now
 		datavar = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
 		variables = {self.variable.name: datavar}
+
+
 
 
 		# Now we create the coordinate variables which are just references to the existing coordinate
@@ -859,7 +862,11 @@ class Field(object):
 			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
 
 			# Assign the new coordinate variable value which is the group key
-			variables[groupby.source] = key
+			# Deal with time correctly
+			if groupby.source == 'time':
+				key = netCDF4.date2num(key, variables[groupby.source].attributes['units'])
+
+			variables[groupby.source][i] = key
 
 			# Assign property ancilary var
 			for key, value in group.properties.items():
