@@ -14,13 +14,15 @@ from copy import copy
 
 class Group(object):
 
-	def __init__(self, slices=None, weights=None, bounds=None, key_name=None):
+	def __init__(self, slices=None, weights=None, bounds=None, key_name=None, properties={}, schema={}):
 
 		self.slices = [[]] if not hasattr(slices, '__getitem__') else slices
 		self.weights = [] if not hasattr(weights, '__getitem__') else weights
 		self.bounds = [[]] if not hasattr(bounds, '__getitem__') else bounds
 
 		self.key_name = key_name
+		self.properties = properties
+		self.schema = schema
 
 
 def generic1d(values, keyfunc):
@@ -108,7 +110,10 @@ def geometry(source, target=None, keyname=None, areas=False):
 			}]
 
 
+	schema = collection.schema['properties']
+
 	intersects = OrderedDict()
+	properties = []
 
 
   	# First gather all source geometries into each group
@@ -117,7 +122,9 @@ def geometry(source, target=None, keyname=None, areas=False):
 
   		geom = shape(feature['geometry'])
 
-		if keyname:
+  		properties.append(feature['properties'])
+
+		if keyname and keyname in feature['properties']:
 			key = feature['properties'][keyname]
 		else:
 			key = tid
@@ -133,6 +140,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 					try:
 						intersection = s.intersection(geom).area/s.area
 					except:
+						print("WARNING: error doing intersection, setting to zero..")
 						print(geom.area, s.area)
 						intersection = 0.0
 
@@ -150,7 +158,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 	groups = OrderedDict()
 
 	# Now process each group into slices and weights
-	for key in intersects:
+	for key in intersects.keys():
 
 		indices = [i[0] for i in intersects[key]]
 		intersections = [i[1] for i in intersects[key]]
@@ -173,7 +181,9 @@ def geometry(source, target=None, keyname=None, areas=False):
 		if isinstance(areas, np.ndarray):
 			w *= areas
 
-		groups[key] = Group(s, w[s]/w[s].sum(), [])
+		groups[key] = Group(s, w[s]/w[s].sum(), [], key,
+			properties=properties[intersects.keys().index(key)],
+			schema=schema)
 
 
 	return groups

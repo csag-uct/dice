@@ -170,10 +170,10 @@ class Variable(object):
 
 	def __repr__(self):
 		if self.name:
-			return "<{}: {} {}>".format(self.__class__.__name__, self.name,
-				   [(d.name, d.size) for d in self.dimensions])
+			return "<{}: {} {} {}>".format(self.__class__.__name__, self.name,
+				   [(d.name, d.size) for d in self.dimensions], self._dtype)
 		else:
-			return "<{}: {}>".format(self.__class__.__name__, [(d.name, d.size) for d in self.dimensions])
+			return "<{}: {} {}>".format(self.__class__.__name__, [(d.name, d.size) for d in self.dimensions], self._dtype)
 
 
 	def ndarray(self):

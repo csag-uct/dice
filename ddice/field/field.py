@@ -24,7 +24,7 @@ import time as timing
 
 class GroupBy(object):
 
-	def __init__(self, source, groups, keyname=None, **args):
+	def __init__(self, source, groups, keyname=None, **kwargs):
 
 		self.source = source
 		self.groups = groups
@@ -791,12 +791,12 @@ class Field(object):
 				dimensions.append(copy.copy(self.variable.dimensions[axis]))
 
 		slices = [slice(None)]*len(dimensions)
-		print('dimensions', dimensions)
+
 
 		# Create the new data variable using numpy storage for now
 		datavar = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
 		variables = {self.variable.name: datavar}
-		print('datavar', datavar)
+
 
 		# Now we create the coordinate variables which are just references to the existing coordinate
 		# variables except for the grouping coordinate which needs to be a new variable
@@ -814,7 +814,17 @@ class Field(object):
 		for name, var in self.ancil_variables.items():
 			variables[name] = var[1]
 
-#		print(variables)
+
+		# Create new ancil variables from group properties if available
+		sample = groupby.groups[groupby.groups.keys()[0]]
+
+		if sample.properties and sample.schema:
+
+			for key, value in sample.properties.items():
+				dtype = np.dtype(sample.schema[key].split(':')[0])
+				variables[key] = Variable([dimensions[mapping[0]]], dtype, key)
+
+
 
 		# Now we actually iterate through the groups applying the function and writing results to the
 		# the new variable and coordinate values to the new coordinate variable
@@ -850,6 +860,10 @@ class Field(object):
 
 			# Assign the new coordinate variable value which is the group key
 			variables[groupby.source] = key
+
+			# Assign property ancilary var
+			for key, value in group.properties.items():
+				variables[key][i] = value
 
 			i += 1
 

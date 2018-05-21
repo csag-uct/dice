@@ -145,6 +145,10 @@ class netCDF4Dataset(Dataset):
 					if '_FillValue' in var.attributes:
 						fill_value = var.attributes['_FillValue']
 
+					# We use object type for string arrays, so can set the fill value for strings here
+					elif A.dtype == object:
+						fill_value = ''
+
 					# Else we get the default fill value for this data type from the module dictionary
 					else:
 						fill_value = netCDF4.default_fillvals[A.dtype.str.strip('<').strip('>')]
