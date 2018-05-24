@@ -234,8 +234,6 @@ class netCDF4Dataset(Dataset):
 					if aggdim not in thisvar.dimensions:
 						continue
 
-					#print('__init__', varname)
-
 					# Construct the dimensions list using the dataset dimensions
 					dims = []
 					for name in thisvar.dimensions:
@@ -243,10 +241,10 @@ class netCDF4Dataset(Dataset):
 							if dim.name == name:
 								dims.append(dim)
 
+
 					index = [0]*len(thisvar.shape)
 					index[0] = file_number
 					index = tuple(index)
-					#print('index = ', index)
 
 					var = self.variables[varname]
 					tiles = var._data._tiles
@@ -255,19 +253,22 @@ class netCDF4Dataset(Dataset):
 					bounds[0] = (original_size, bounds[0][1])
 					shape = tuple([d.size for d in dims])
 
-					#print('shape', var.shape, thisvar.shape, shape)
-
+					# Create a netCDF4Array instance using the netcdf4 variable and use this as the tile data
 					tiledata = netCDF4Array(thisvar)
 
+					# Construct the tile and add it to the tiles dict
 					tiles[index] = {'bounds': bounds, 'data':tiledata}
 
-					#print(index, tiles[index])
-
+					#Create a new tiledArray using the ammended tiles dict
 					data = tiledArray(shape, var.dtype, tiles=tiles)
 
+					# Creat a new variable and replace the old one
 					self._variables[varname] = netCDFVariable(dims, thisvar.dtype, name=varname, attributes=var.attributes, data=data, storage=tiledArray, dataset=self)
 
-					#print self.variables[varname]
+				# Increment file number as this determines the tile index
+				file_number += 1
+
+			print
 
 
 	def makefield(self):
