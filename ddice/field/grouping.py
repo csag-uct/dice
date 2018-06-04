@@ -115,10 +115,9 @@ def geometry(source, target=None, keyname=None, areas=False):
 
 
 	schema = collection.schema['properties']
-
-	intersects = OrderedDict()
 	properties = []
 
+	intersects = OrderedDict()
 
   	# First gather all source geometries into each group
   	tid = 0
@@ -175,10 +174,9 @@ def geometry(source, target=None, keyname=None, areas=False):
 	# Now process each group into slices and weights
 	for key in intersects.keys():
 
-		# Extract the source feature id, intersection fractions, and properties
+		# Extract the source feature id, intersection fractions
 		indices = [i[0] for i in intersects[key]]
 		intersections = [i[1] for i in intersects[key]]
-		properties = [i[2] for i in intersects[key]]
 
 		# Construct the weights array
 		w = np.zeros(source.shape, dtype=np.float32)
@@ -190,18 +188,25 @@ def geometry(source, target=None, keyname=None, areas=False):
 		# Find non-zero weights
 		nonzero = w.nonzero()
 
-		# Construct the slice based on min and max non zero weight indices
-		s = []
-		for axis in range(len(original_shape)):
-			s.append(slice(nonzero[axis].min(), nonzero[axis].max()+1))
+		# Only include groups where we have intersection weights
+		if len(nonzero[0]):
 
-		# Mutiply weights by areas if available
-		if isinstance(areas, np.ndarray):
-			w *= areas
+			# Construct the slice based on min and max non zero weight indices
+			s = []
+			for axis in range(len(original_shape)):
 
-		groups[key] = Group(s, w[s]/w[s].sum(), [], key,
-			properties=properties[intersects.keys().index(key)],
-			schema=schema)
+				try:
+					s.append(slice(nonzero[axis].min(), nonzero[axis].max()+1))
+				except:
+					print(len(nonzero), nonzero)
+
+			# Mutiply weights by areas if available
+			if isinstance(areas, np.ndarray):
+				w *= areas
+
+			groups[key] = Group(s, w[s]/w[s].sum(), [], key,
+				properties=properties[intersects.keys().index(key)],
+				schema=schema)
 
 
 	return groups
