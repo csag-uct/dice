@@ -95,16 +95,14 @@ print('grouping function: {}({})'.format(groupby_parts[0], groupby_args))
 
 # Index the groups
 groupby = field.groupby(groupby_coordinate, groupby_function)
-
 print('{} groups ({}) indexed'.format(len(groupby.groups), function_parts[0]))
-print(field.coordinate_variables)
 
-for group in groupby.groups:
-	print(group)
 
+# Apply the function
 ds, field = field.apply(groupby, apply_parts[0], **apply_kwargs)
 
 
+# Construct the target filename and variables
 target_parts = args.target.split(':')
 
 if len(target_parts) > 1:
