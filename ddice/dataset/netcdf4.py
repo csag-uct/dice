@@ -10,6 +10,8 @@ from ddice.variable import Dimension, Variable
 from dataset import Dataset
 from dataset import DatasetError
 
+MAX_MEMORY = 1000*1e6
+
 class netCDF4Array(Array):
 	"""
 	A netCDF4 file base array store
@@ -128,15 +130,13 @@ class netCDF4Dataset(Dataset):
 			for name, var in dataset.variables.items():
 				dims = tuple([d.name for d in var.dimensions])
 				ncvar = self._ds.createVariable(name, var.dtype, dims, fill_value=False)
-
+				print(var)
 				# Write variable attributes
 				for key, value in var.attributes.items():
 					ncvar.setncattr(key, value)
 
 				# Actually write the data array
 				if len(dims):
-
-					A = var.ndarray()
 
 					# Its a bit messy but seems to be needed to make sure that masked arrays are written
 					# with the correct missing value
@@ -146,15 +146,30 @@ class netCDF4Dataset(Dataset):
 						fill_value = var.attributes['_FillValue']
 
 					# We use object type for string arrays, so can set the fill value for strings here
-					elif A.dtype == object:
+					elif var.dtype == object:
 						fill_value = ''
 
 					# Else we get the default fill value for this data type from the module dictionary
 					else:
-						fill_value = netCDF4.default_fillvals[A.dtype.str.strip('<').strip('>')]
+						fill_value = netCDF4.default_fillvals[var.dtype.str.strip('<').strip('>')]
+
+					# Writing the whole array in one step could exceed memory limits so calculate chunck size
+					size = np.cumprod(np.array(var.shape))[-1] * var.dtype.itemsize
+					print("array size = ", size)
+					chunks = int(np.floor(size/MAX_MEMORY) + 1)
+
+					# For now just chunk the first dimension... (come back to this)
+					chunk_size = int(np.floor(var.shape[0]/chunks))
+
+					print("writing {} chunks of size {}".format(chunks, chunk_size))
 
 					# Now actually write the data
-					ncvar[:] = np.ma.filled(A, fill_value)
+					for chunk in range(0, chunks):
+						start = chunk*chunk_size
+						end = min(start + chunk_size, var.shape[0])
+						print(var.shape, chunk, start, end)
+
+						ncvar[start:end] = np.ma.filled(var[start:end].ndarray(), fill_value)
 
 
 				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
