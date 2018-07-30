@@ -28,7 +28,7 @@ def mask(values, above=None, below=None):
 def generic(func, values, axis=0, above=None, below=None):
 
 	values = mask(values, above=above, below=below)
-
+	
 	return func(values, axis=axis)
 
 

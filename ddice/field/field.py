@@ -686,9 +686,11 @@ class Field(object):
 		# Geometry mapping uses ordered union of latitude and longitude maps
 		elif coordinate == 'geometry':
 
-			if self.coordinate_variables['latitude'] == self.coordinate_variables['longitude'][0]:
+			# If dimension map for latitude and longitude is the same then just use the latitude map
+			if self.coordinate_variables['latitude'][0] == self.coordinate_variables['longitude'][0]:
 				mapping = self.coordinate_variables['latitude'][0]
 
+			# otherwise, combing latude and longitude dimension maps
 			else:
 				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
 
@@ -764,11 +766,11 @@ class Field(object):
 		# Geometry mapping uses ordered union of latitude and longitude maps
 		elif groupby.source == 'geometry':
 
-			# If dimensions for latitude and longitude are the same then we just use the latitude mapping
-			if self.coordinate_variables['latitude'] == self.coordinate_variables['longitude'][0]:
+			# If dimension map for latitude and longitude is the same then just use the latitude map
+			if self.coordinate_variables['latitude'][0] == self.coordinate_variables['longitude'][0]:
 				mapping = self.coordinate_variables['latitude'][0]
 
-			# Otherwise we construct the mapping by combining both latitude and longitude mappings
+			# otherwise, combing latude and longitude dimension maps
 			else:
 				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
 
@@ -850,6 +852,7 @@ class Field(object):
 			# We may have dropped the mapping dimension if there is only one group
 			if mapping[0] < len(slices):
 				slices[mapping[0]] = i
+
 
 			# Apply the funcion and assign to the new variable
 			if len(mapping) == 1:
