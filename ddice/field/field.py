@@ -622,8 +622,8 @@ class Field(object):
 			feature['properties']['_id'] = id
 
 			# Add ancilary variable properties
-#			for name, var in self.ancil_variables.items():
-#				feature['properties'][name] = var[1].ndarray().flatten()[id]
+			for name, var in self.ancil_variables.items():
+				feature['properties'][name] = var[1].ndarray().flatten()[id]
 
 			# Optionally add an area property
 			if add_areas:
@@ -764,9 +764,11 @@ class Field(object):
 		# Geometry mapping uses ordered union of latitude and longitude maps
 		elif groupby.source == 'geometry':
 
+			# If dimensions for latitude and longitude are the same then we just use the latitude mapping
 			if self.coordinate_variables['latitude'] == self.coordinate_variables['longitude'][0]:
 				mapping = self.coordinate_variables['latitude'][0]
 
+			# Otherwise we construct the mapping by combining both latitude and longitude mappings
 			else:
 				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
 
