@@ -85,6 +85,14 @@ def julian(values, windowsize=1):
 	return generic1d(values, keyfunc)
 
 
+def day(values):
+
+	def keyfunc(value):
+		return dt(value.year, value.month, value.day), 1
+
+	return generic1d(values, keyfunc)
+
+
 
 def geometry(source, target=None, keyname=None, areas=False):
 
