@@ -91,7 +91,7 @@ try:
 except:
 	raise Exception('failed to identify grouping function: '.format(function_parts[0]))
 
-print('grouping function: {}({})'.format(groupby_parts[0], groupby_args))
+print('grouping function: {}({}) on coordinate {}'.format(groupby_function, groupby_args, groupby_coordinate))
 
 # Index the groups
 groupby = field.groupby(groupby_coordinate, groupby_function)
