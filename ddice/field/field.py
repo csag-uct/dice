@@ -300,7 +300,6 @@ class Field(object):
 		mappings = {}
 
 		for name, value in kwargs.items():
-			#print name, value
 
 			# First convert single values to tuples
 			if type(value) not in [tuple, list]:
