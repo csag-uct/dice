@@ -130,7 +130,7 @@ class netCDF4Dataset(Dataset):
 			for name, var in dataset.variables.items():
 				dims = tuple([d.name for d in var.dimensions])
 				ncvar = self._ds.createVariable(name, var.dtype, dims, fill_value=False)
-				print(var)
+
 				# Write variable attributes
 				for key, value in var.attributes.items():
 					ncvar.setncattr(key, value)
@@ -216,11 +216,12 @@ class netCDF4Dataset(Dataset):
 							dims.append(dim)
 
 				# Figure out dtype
-				if var.scale:
-					dtype = np.float32
+				#if var.scale:
+				#	dtype = np.float32
 
-				else:
-					dtype = var.dtype
+				#else:
+				#	dtype = var.dtype
+				dtype = var.dtype
 
 
 				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
@@ -285,15 +286,13 @@ class netCDF4Dataset(Dataset):
 					tiles[index] = {'bounds': bounds, 'data':tiledata}
 
 					#Create a new tiledArray using the ammended tiles dict
-					data = tiledArray(shape, var.dtype, tiles=tiles)
+					data = tiledArray(shape, dtype, tiles=tiles)
 
 					# Creat a new variable and replace the old one
-					self._variables[varname] = netCDFVariable(dims, thisvar.dtype, name=varname, attributes=var.attributes, data=data, storage=tiledArray, dataset=self)
+					self._variables[varname] = netCDFVariable(dims, dtype, name=varname, attributes=var.attributes, data=data, storage=tiledArray, dataset=self)
 
 				# Increment file number as this determines the tile index
 				file_number += 1
-
-			print
 
 
 	def makefield(self):
