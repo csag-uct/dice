@@ -824,6 +824,8 @@ class Field(object):
 
 		# Create new ancil variables from group properties if available
 		sample = groupby.groups[groupby.groups.keys()[0]]
+		#print('sample.properties', sample.properties)
+		#print('sample.schema', sample.schema)
 
 		if sample.properties and sample.schema:
 
@@ -871,7 +873,8 @@ class Field(object):
 			if groupby.source == 'time':
 				key = netCDF4.date2num(key, variables[groupby.source].attributes['units'])
 
-			variables[groupby.source][i] = key
+			#print(variables)
+			#variables[groupby.source][i] = key
 
 			# Assign property ancilary var
 			for key, value in group.properties.items():

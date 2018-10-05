@@ -151,11 +151,13 @@ class netCDF4Dataset(Dataset):
 
 					# Else we get the default fill value for this data type from the module dictionary
 					else:
-						fill_value = netCDF4.default_fillvals[var.dtype.str.strip('<').strip('>')]
+						try:
+							fill_value = netCDF4.default_fillvals[var.dtype.str.strip('<').strip('>')]
+						except:
+							fill_value = ''
 
 					# Writing the whole array in one step could exceed memory limits so calculate chunck size
-					size = np.cumprod(np.array(var.shape))[-1] * var.dtype.itemsize
-					print("array size = ", size)
+					size = np.cumprod(np.array(var.shape))[-1] * np.dtype(var.dtype).itemsize
 					chunks = int(np.floor(size/MAX_MEMORY) + 1)
 
 					# For now just chunk the first dimension... (come back to this)
@@ -206,11 +208,19 @@ class netCDF4Dataset(Dataset):
 
 			for varname, var in self._ds.variables.items():
 
+				# Construct dimensions
 				dims = []
 				for name in var.dimensions:
 					for dim in self._dimensions:
 						if dim.name == name:
 							dims.append(dim)
+
+				# Figure out dtype
+				if var.scale:
+					dtype = np.float32
+
+				else:
+					dtype = var.dtype
 
 
 				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
@@ -221,9 +231,9 @@ class netCDF4Dataset(Dataset):
 
 				tiles = {index: {'bounds': bounds, 'data':tiledata}}
 
-				data = tiledArray(var.shape, var.dtype, tiles=tiles)
+				data = tiledArray(var.shape, dtype, tiles=tiles)
 
-				self._variables[varname] = netCDFVariable(dims, var.dtype, name=varname, attributes=attrs, data=data, storage=tiledArray, dataset=self)
+				self._variables[varname] = netCDFVariable(dims, dtype, name=varname, attributes=attrs, data=data, storage=tiledArray, dataset=self)
 
 			# Now try open the other files
 			file_number = 1
