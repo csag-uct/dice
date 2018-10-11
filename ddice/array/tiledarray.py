@@ -262,7 +262,7 @@ class tiledArray(Array):
 			else:
 				data = tile['data'][tile_slices].ndarray()
 
-			result[data_slices] = data
+			result[tuple(data_slices)] = data
 
 		return result
 
