@@ -223,7 +223,7 @@ class CFField(Field):
 			comparison = {}
 
 			for name, field in fields.items():
-				print name, field
+				print(name, field)
 
 				comparison[name] = []
 
@@ -241,7 +241,7 @@ class CFField(Field):
 								comparison[name].append((coord, mapping))
 
 
-			print comparison
+			print(comparison)
 
 				# Identify time merge
 #				if len(different) == 1 and 'time' in different:

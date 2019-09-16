@@ -1,9 +1,9 @@
 import numpy as np
 
-from array import Array
-from array import real_slices, reslice
+from .array import Array
+from .array import real_slices, reslice
 
-from nparray import numpyArray
+from .nparray import numpyArray
 
 
 

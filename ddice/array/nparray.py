@@ -1,6 +1,6 @@
 import numpy as np
 
-from array import Array, real_slices, reslice
+from .array import Array, real_slices, reslice
 
 class numpyArray(Array):
 	"""

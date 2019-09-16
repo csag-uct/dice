@@ -7,8 +7,8 @@ from ddice.array import numpyArray
 from ddice.variable import Variable, Dimension
 from ddice.dataset import Dataset
 
-import grouping
-import functions
+import ddice.field.grouping as grouping
+import ddice.field.functions as functions
 
 import numpy as np
 import netCDF4

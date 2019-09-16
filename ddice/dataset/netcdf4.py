@@ -7,8 +7,8 @@ from ddice.array import Array, tiledArray
 from ddice.array import reslice
 from ddice.variable import Dimension, Variable
 
-from dataset import Dataset
-from dataset import DatasetError
+from .dataset import Dataset
+from .dataset import DatasetError
 
 MAX_MEMORY = 1000*1e6
 

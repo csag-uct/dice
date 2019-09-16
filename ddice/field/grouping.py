@@ -100,9 +100,9 @@ def geometry(source, target=None, keyname=None, areas=False):
 	bounds, source = source
 
 	original_shape = source.shape
-  	source = source.flatten()
+	source = source.flatten()
 
-  	# Try and open the shapefile
+	# Try and open the shapefile
 	try:
 		collection = fiona.open(target)
 
@@ -127,13 +127,13 @@ def geometry(source, target=None, keyname=None, areas=False):
 
 	intersects = OrderedDict()
 
-  	# First gather all source geometries into each group
-  	tid = 0
-  	for feature in collection:
+	# First gather all source geometries into each group
+	tid = 0
+	for feature in collection:
 
-  		geom = shape(feature['geometry'])
+		geom = shape(feature['geometry'])
 
-  		properties.append(feature['properties'])
+		properties.append(feature['properties'])
 
 		if keyname and keyname in feature['properties']:
 			key = feature['properties'][keyname]
@@ -146,10 +146,10 @@ def geometry(source, target=None, keyname=None, areas=False):
 		intersects[key] = []
 
 		# Now we loop through all the source geomoetries
-  		sid = 0
-  		for s in source:
+		sid = 0
+		for s in source:
 
-  			try:
+			try:
 				if s.intersects(geom):
 
 					# Calculate the intersection fraction

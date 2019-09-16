@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 import copy
 import numpy as np
 
-from util import real_slices, reslice
+from .util import real_slices, reslice
 
 
 

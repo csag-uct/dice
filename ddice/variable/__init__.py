@@ -1,3 +1,3 @@
 
-from variable import Dimension
-from variable import Variable
+from .variable import Dimension
+from .variable import Variable
