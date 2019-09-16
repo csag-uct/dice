@@ -52,7 +52,7 @@ class Array(object):
 				if step == None:
 					step = 1
 
-				result.append((stop - start)/step)
+				result.append(int((stop - start)/step))
 
 			# or get the length of a list
 			else:
