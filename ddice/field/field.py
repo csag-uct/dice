@@ -335,7 +335,8 @@ class Field(object):
 
 
 			# str or unicode values
-			if isinstance(value[0], str) or isinstance(value[0], unicode):
+#			if isinstance(value[0], str) or isinstance(value[0], unicode):
+			if isinstance(value[0], str):
 				mask = vals != value
 
 			# numerical values

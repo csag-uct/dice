@@ -58,7 +58,7 @@ class Dataset(object):
 
 		# Process/check attributes dictionary
 		if type(attributes) == dict:
-			self._attributes = dict([(unicode(name), unicode(value)) for name, value in attributes.items()])
+			self._attributes = dict([(name, value) for name, value in attributes.items()])
 		else:
 			return TypeError('attributes must be a dictionary')
 
