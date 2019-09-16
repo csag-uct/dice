@@ -101,7 +101,6 @@ class Variable(object):
 		<Variable: V [('x', 1), ('y', 1)]>
 		>>> V.units = 'kg/m2/s'
 		"""
-
 		self._dimensions = []
 		self._dtype = dtype
 		self.name = name
@@ -218,6 +217,6 @@ class Variable(object):
 		for d, size in zip(self.dimensions, data.shape):
 			dims.append(Dimension(d.name, size, d.fixed))
 
-		result = self.__class__(dims, data.dtype, name=self.name, attributes=self.attributes, dataset=self.dataset, data=data, storage=numpyArray)
+		result = self.__class__(dims, data.dtype, name=self.name, attributes=self.attributes, dataset=self.dataset, data=data, storage=data.__class__)
 
 		return result
