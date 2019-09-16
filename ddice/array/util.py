@@ -80,7 +80,6 @@ def reslice(shape, slices, newslices):
 		newslices = (newslices,)
 
 	for i in range(len(newslices)):
-
 		s = slices[i]
 
 		ns = newslices[i]
@@ -99,16 +98,16 @@ def reslice(shape, slices, newslices):
 			if not step:
 				step = 1
 
-			s = np.arange(start, stop, step)
+			s = np.arange(start, stop, step, dtype=np.int64)
 
 		# Integer indices also become single element arrays
 		elif isinstance(s, int):
 			was = int
-			s = np.array(s)
+			s = np.array(s, dtype=np.int64)
 
 		# Iterables become arrays
 		elif hasattr(s, '__iter__'):
-			s = np.array(s)
+			s = np.array(s, dtype=np.int64)
 
 		# Otherwise throw an error
 		else:
@@ -123,7 +122,6 @@ def reslice(shape, slices, newslices):
 		else:
 			newshape[i] = 1
 
-
 		# Try and get back to the type of slice we had originally
 		if was == slice  and isinstance(ns, slice):
 			slices[i] = slice(s[0], s[-1]+1, ns.step)
@@ -131,11 +129,10 @@ def reslice(shape, slices, newslices):
 		elif was == int:
 			slices[i] = slice(s,s+1,1)
 
-		elif isinstance(s, int):
+		elif isinstance(s, np.int64):
 			slices[i] = slice(s,s+1,1)
 
 		else:
 			slices[i] = s
-
 
 	return tuple(newshape), tuple(slices)
