@@ -301,6 +301,10 @@ class Field(object):
 
 		for name, value in kwargs.items():
 
+			# Skip values == None
+			if value == None:
+				continue
+
 			# First convert single values to tuples
 			if type(value) not in [tuple, list]:
 				value = tuple([value])
