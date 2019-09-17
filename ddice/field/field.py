@@ -347,9 +347,10 @@ class Field(object):
 			else:
 				mask = vals < value[0]
 
-			if len(mask) > 1 and len(value) > 1:
-				mask = np.logical_or(mask, (vals > value[1]))
-
+				# Check if we have upper bound
+				if len(mask) > 1 and len(value) > 1:
+					mask = np.logical_or(mask, (vals > value[1]))
+	
 			mapping = tuple(mapping)
 
 			if mapping in mappings:
