@@ -208,12 +208,14 @@ def geometry(source, target=None, keyname=None, areas=False):
 				except:
 					print(len(nonzero), nonzero)
 
+			s = tuple(s)
+
 			# Mutiply weights by areas if available
 			if isinstance(areas, np.ndarray):
 				w *= areas
 
 			groups[key] = Group(s, w[s]/w[s].sum(), [], key,
-				properties=properties[intersects.keys().index(key)],
+				properties=properties[list(intersects.keys()).index(key)],
 				schema=schema)
 
 
