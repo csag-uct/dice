@@ -828,7 +828,7 @@ class Field(object):
 
 
 		# Create new ancil variables from group properties if available
-		sample = groupby.groups[groupby.groups.keys()[0]]
+		sample = groupby.groups[list(groupby.groups.keys())[0]]
 		#print('sample.properties', sample.properties)
 		#print('sample.schema', sample.schema)
 
