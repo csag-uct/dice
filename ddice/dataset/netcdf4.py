@@ -128,7 +128,6 @@ class netCDF4Dataset(Dataset):
 
 			# Create the variables
 			for name, var in dataset.variables.items():
-				print(name, var)
 				dims = tuple([d.name for d in var.dimensions])
 				
 				ncvar = self._ds.createVariable(name, var.dtype, dims)
