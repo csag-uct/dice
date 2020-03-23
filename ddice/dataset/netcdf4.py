@@ -128,12 +128,15 @@ class netCDF4Dataset(Dataset):
 
 			# Create the variables
 			for name, var in dataset.variables.items():
+				print(name, var)
 				dims = tuple([d.name for d in var.dimensions])
-				ncvar = self._ds.createVariable(name, var.dtype, dims, fill_value=False)
+				
+				ncvar = self._ds.createVariable(name, var.dtype, dims)
 
 				# Write variable attributes
 				for key, value in var.attributes.items():
-					ncvar.setncattr(key, value)
+					if key not in ['_FillValue']:
+						ncvar.setncattr(key, value)
 
 				# Actually write the data array
 				if len(dims):
@@ -171,7 +174,10 @@ class netCDF4Dataset(Dataset):
 						end = min(start + chunk_size, var.shape[0])
 						print(var.shape, chunk, start, end)
 
-						ncvar[start:end] = np.ma.filled(var[start:end].ndarray(), fill_value)
+						try:
+							ncvar[start:end] = np.ma.filled(var[start:end].ndarray(), fill_value)
+						except:
+							print("WARNING, problem writing this chunk")
 
 
 				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
