@@ -18,6 +18,9 @@ cffield_unitsmap = {
 	'degreeN': 'latitude',
 	'degreesN': 'latitude',
 
+	'degrees south': 'latitude',
+	'degrees_south': 'latitude',
+
 	'degrees east': 'longitude',
 	'degrees_east': 'longitude',
 	'degree_east': 'longitude',
