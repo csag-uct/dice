@@ -246,9 +246,9 @@ class tiledArray(Array):
 		"""
 
 		if self.dtype == str:
-			result = np.empty(self.shape, dtype=object)
+			result = np.ma.asarray(np.empty(self.shape, dtype=object))
 		else:
-			result = np.empty(self.shape, dtype=self.dtype)
+			result = np.ma.asarray(np.empty(self.shape, dtype=self.dtype))
 
 		for index in self.tiles():
 
