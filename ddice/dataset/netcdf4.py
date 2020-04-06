@@ -221,12 +221,12 @@ class netCDF4Dataset(Dataset):
 							dims.append(dim)
 
 				# Figure out dtype
-				#if var.scale:
-				#	dtype = np.float32
+				if var.scale:
+					dtype = np.float32
 
-				#else:
-				#	dtype = var.dtype
-				dtype = var.dtype
+				else:
+					dtype = var.dtype
+				#dtype = var.dtype
 
 
 				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
