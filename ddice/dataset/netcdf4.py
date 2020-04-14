@@ -154,7 +154,7 @@ class netCDF4Dataset(Dataset):
 					# Else we get the default fill value for this data type from the module dictionary
 					else:
 						try:
-							fill_value = netCDF4.default_fillvals[var.dtype.str.strip('<').strip('>')]
+							fill_value = netCDF4.default_fillvals[np.dtype(var.dtype).str.strip('<').strip('>')]
 						except:
 							fill_value = ''
 
@@ -172,11 +172,12 @@ class netCDF4Dataset(Dataset):
 						start = chunk*chunk_size
 						end = min(start + chunk_size, var.shape[0])
 						print(var.shape, chunk, start, end)
+						print('fill_value', name, var.dtype, fill_value)
 
-						try:
-							ncvar[start:end] = np.ma.filled(var[start:end].ndarray(), fill_value)
-						except:
-							print("WARNING, problem writing this chunk")
+#						try:
+						ncvar[start:end] = np.ma.filled(var[start:end].ndarray(), fill_value)
+#						except:
+#							print("WARNING, problem writing this chunk")
 
 
 				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
@@ -220,16 +221,19 @@ class netCDF4Dataset(Dataset):
 						if dim.name == name:
 							dims.append(dim)
 
-				# Figure out dtype
-				if var.scale:
-					dtype = np.float32
 
+				# Get variable attributes
+				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
+
+				# Figure out dtype
+				if var.scale and var.dtype in [np.int8, np.int16]:
+					dtype = np.float32
+					attrs.pop('scale_factor', None)
+					attrs.pop('add_offset', None)
+					
 				else:
 					dtype = var.dtype
-				#dtype = var.dtype
 
-
-				attrs = dict([(name, var.getncattr(name)) for name in var.ncattrs()])
 
 				index = tuple([0]*len(var.shape))
 				bounds = [(0,var.shape[i]) for i in range(len(var.shape))]
