@@ -7,13 +7,16 @@ from ddice.array import numpyArray
 from ddice.variable import Variable, Dimension
 from ddice.dataset import Dataset
 
-import ddice.field.grouping as grouping
-import ddice.field.functions as functions
+import ddice.field.grouping
+import ddice.field.functions
 
 import numpy as np
 import netCDF4
 import pyproj
 
+import fiona
+
+from shapely.geometry import shape, mapping
 from shapely.geometry import Point, Polygon, MultiPolygon
 import shapely.ops
 
@@ -559,7 +562,7 @@ class Field(object):
 
 
 
-	def feature_collection(self, values=None, add_areas=False):
+	def feature_collection(self, shapefile=None, values=None, add_areas=False):
 		"""Return a dict of features (GeoJSON structure) for this field.  For point datasets this will be a set of
 		Point features, for gridded datasets this will be a set of simple Polygon features either inferred from the
 		grid point locations, or directly from the cell bounds attributes (not implemented yet)
@@ -590,18 +593,31 @@ class Field(object):
 		# map to the same variable dimension then we have a discrete points dataset, otherwise a gridded dataset
 
 		# Get geometry array
-		bounds, geometries = self.geometries()
+		if not shapefile:
+			bounds, geometries = self.geometries()
+
+		else:
+			geometries = []
+			try:
+				with fiona.open(shapefile) as src:
+					for f in src:
+						geometries.append(shape(f['geometry']))
+			except:
+				pass
+
+		geometries = np.array(geometries)
 
 		# If we want areas then get them
 		if add_areas:
 			areas = self.areas().flatten()
 
 
-		if len(self.shape) > geometries.shape:
-			data = np.ma.masked_array(self.variable.ndarray()).mean(axis=0).filled(0.0)
+		if values:
+			if len(self.shape) > len(geometries.shape):
+				data = np.ma.masked_array(self.variable.ndarray()).mean(axis=(0,1)).filled(0.0)
 
-		else:
-			data = np.ma.masked_array(self.variable.ndarray()).filled(0.0)
+			else:
+				data = np.ma.masked_array(self.variable.ndarray()).filled(0.0)
 
 
 		result = dict({"type":"FeatureCollection", "features":[]})
@@ -613,15 +629,8 @@ class Field(object):
 		for geometry in geometries:
 
 			feature = {'type':'Feature', 'properties':{}}
-			feature['geometry'] = {'type':geometry.geom_type}
 
-			if geometry.geom_type == 'Polygon':
-				coordinates = [[list(xy) for xy in list(geometry.exterior.coords)]]
-
-			else:
-				coordinates = list(geometry.coords)
-
-			feature['geometry']['coordinates'] = coordinates
+			feature['geometry'] = mapping(geometry)
 
 			# Add an _id property
 			feature['properties']['_id'] = id
