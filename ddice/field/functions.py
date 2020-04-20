@@ -1,7 +1,7 @@
 """
 Aggregation functions that can be used as arguments to the Field.apply method
 """
-from numba import jit
+#from numba import jit
 import numpy as np
 
 
