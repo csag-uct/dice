@@ -187,12 +187,12 @@ class netCDF4Dataset(Dataset):
 		else:
 
 			# Get files list
-			if isinstance(uri, str):
-				files = glob.glob(uri)
-				files.sort()
+			if isinstance(uri, list):
+				files = uri
 
 			else:
-				files = uri
+				files = glob.glob(uri)
+				files.sort()
 
 			# Open the first one... first
 			try:
