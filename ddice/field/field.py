@@ -760,7 +760,7 @@ class Field(object):
 
 		# Check that the function is available
 		try:
-			func = eval('functions.{}'.format(funcname))
+			func = eval('ddice.field.functions.{}'.format(funcname))
 		except:
 			raise Exception('Function {} is not available in functions module'.format(funcname))
 
