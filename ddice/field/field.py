@@ -883,7 +883,10 @@ class Field(object):
 
 			# Assign property ancilary var
 			for key, value in group.properties.items():
-				variables[key][i] = value
+				try:
+					variables[key][i] = value
+				except:
+					pass
 
 			i += 1
 

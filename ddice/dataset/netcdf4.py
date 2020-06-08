@@ -174,10 +174,12 @@ class netCDF4Dataset(Dataset):
 						print(var.shape, chunk, start, end)
 						print('fill_value', name, var.dtype, fill_value)
 
-#						try:
-						ncvar[start:end] = np.ma.filled(var[start:end].ndarray(), fill_value)
-#						except:
-#							print("WARNING, problem writing this chunk")
+						try:
+							ncvar[start:end] = np.ma.filled(var[start:end].ndarray(), fill_value)
+						except:
+							print("WARNING, problem writing this chunk", sys.exc_info())
+							print('var', var[start:end].ndarray())
+							print('fill_value', fill_value)
 
 
 				self.variables[name] = netCDFVariable(var.dimensions, var.dtype, name=name, attributes=var.attributes, dataset=self, data=netCDF4Array(ncvar))
@@ -193,6 +195,8 @@ class netCDF4Dataset(Dataset):
 
 			else:
 				files = uri
+
+			self.files = files	
 
 			# Open the first one... first
 			try:
