@@ -183,7 +183,9 @@ class Variable(object):
 
 
 	def asjson(self, data=False):
-		return {'dimensions':[], 'dtype':repr(self.dtype), 'attributes':self.attributes.copy()}
+
+		dims = [d.name for d in self.dimensions]
+		return {'dimensions':dims, 'dtype':repr(self.dtype), 'attributes':self.attributes.copy()}
 
 
 	@property

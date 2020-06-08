@@ -122,7 +122,7 @@ class Dataset(object):
 
 	def asjson(self):
 
-		result = {'dimensions':[], 'variables':{}, 'attributes':self.attributes.copy()}
+		result = {"dimensions":[], "variables":{}, "attributes":self.attributes.copy()}
 
 		for dim in self.dimensions:
 			result['dimensions'].append(dim.asjson())
