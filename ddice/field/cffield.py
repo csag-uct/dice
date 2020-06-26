@@ -86,7 +86,6 @@ class CFField(Field):
 
 		super(CFField, self).__init__(variable)
 
-
 		if 'coordinates' in self.variable.attributes:
 			coordinates = self.variable.attributes['coordinates'].split()
 		else:
@@ -111,7 +110,7 @@ class CFField(Field):
 			var_dimension_strings = [repr(d) for d in var.dimensions]
 			self_dimension_strings = [repr(d) for d in self.variable.dimensions]
 
-			if (name in coordinates) or (set(var_dimension_strings).issubset(self_dimension_strings) and (len(var.dimensions) < len(self.variable.dimensions))):
+			if (name in coordinates) or (set(var_dimension_strings).issubset(self_dimension_strings) and (len(var.dimensions) <= len(self.variable.dimensions))):
 
 				# Now that we have found a coordinate variables, construct its dimensions mapping
 				mapping = []
