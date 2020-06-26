@@ -47,6 +47,7 @@ cffield_unitsmap = {
 	'minutes since *': 'time',
 	'hours since *': 'time',
 	'days since *': 'time',
+	'months since *': 'time'
 }
 
 
