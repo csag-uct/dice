@@ -47,6 +47,7 @@ cffield_unitsmap = {
 	'minutes since *': 'time',
 	'hours since *': 'time',
 	'days since *': 'time',
+	'months since *': 'time'
 }
 
 
@@ -86,7 +87,6 @@ class CFField(Field):
 
 		super(CFField, self).__init__(variable)
 
-
 		if 'coordinates' in self.variable.attributes:
 			coordinates = self.variable.attributes['coordinates'].split()
 		else:
@@ -94,6 +94,10 @@ class CFField(Field):
 
 		# Search through all variables to try and find coordinate/ancil variables for this variable
 		for name, var in self.variable.dataset.variables.items():
+
+			# Ignore this self variable
+			if name == self.variable.name:
+				continue
 
 			# If we have units, check if they are coordinate units, if not coordinate_name will be None
 			if 'units' in var.attributes:
@@ -111,7 +115,7 @@ class CFField(Field):
 			var_dimension_strings = [repr(d) for d in var.dimensions]
 			self_dimension_strings = [repr(d) for d in self.variable.dimensions]
 
-			if (name in coordinates) or (set(var_dimension_strings).issubset(self_dimension_strings) and (len(var.dimensions) < len(self.variable.dimensions))):
+			if (name in coordinates) or (set(var_dimension_strings).issubset(self_dimension_strings) and (len(var.dimensions) <= len(self.variable.dimensions))):
 
 				# Now that we have found a coordinate variables, construct its dimensions mapping
 				mapping = []

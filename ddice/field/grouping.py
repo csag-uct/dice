@@ -9,6 +9,7 @@ import fiona
 import pyproj
 from shapely.geometry import shape, asShape, Polygon
 from shapely.validation import explain_validity
+from shapely.ops import transform
 
 from copy import copy
 
@@ -105,6 +106,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 	# Try and open the shapefile
 	try:
 		collection = fiona.open(target)
+		target_crs = collection.crs
 
 	except:
 
@@ -120,27 +122,39 @@ def geometry(source, target=None, keyname=None, areas=False):
 				'properties':{}
 			}]
 
+		target_crs = 'epsg:4326'
+
 
 
 	schema = collection.schema['properties']
 	properties = []
 
+
+	# Create projection transform to Mollweide equal area
+	source_tran = pyproj.Transformer.from_crs('epsg:4326','ESRI:53009')
+	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:53009')
+
+	
+	# Create the intersects dictionary
 	intersects = OrderedDict()
 
-	# First gather all source geometries into each group
+
+	# First gather all source geometries into each feature
 	tid = 0
 	for feature in collection:
 
-		geom = shape(feature['geometry'])
+		geom = transform(target_tran.transform, shape(feature['geometry'])) # Transform to Mollweide
 
-		properties.append(feature['properties'])
+		print(feature['properties'], keyname, geom)
+
+		#properties.append(feature['properties'])
 
 		if keyname and keyname in feature['properties']:
 			key = feature['properties'][keyname]
 		else:
 			key = tid
 
-		print(key)
+		print('processing feature', key)
 
 		# Initialise intersects for this target feature
 		intersects[key] = []
@@ -149,14 +163,21 @@ def geometry(source, target=None, keyname=None, areas=False):
 		sid = 0
 		for s in source:
 
+			#print(s)
+			try:
+				st = transform(source_tran.transform, s) # Transform to Mollweide
+			except:
+				print("transform error", s, st)
+
 			try:
 				if s.intersects(geom):
 
 					# Calculate the intersection fraction
 					try:
-						intersection = s.intersection(geom).area/s.area
+						intersection = st.intersection(geom).area/s.area
 					except:
 						print("WARNING: error doing intersection, setting to zero..")
+						print(s, st)
 						print(geom.area, s.area)
 
 						intersection = 0.0
