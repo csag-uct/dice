@@ -22,18 +22,23 @@ print(ds)
 field = CFField(ds.variables[varname])
 print('field', field.shape)
 
+if len(sys.argv) > 3:
+	target, keyname = sys.argv[2].split(':')
 
-shp_filename, shp_property = sys.argv[2].split(':')
-c = collection(shp_filename)
-target = [shape(feature['geometry']) for feature in c]
+else:
+	target = None
+	keyname = None
 
-groupby = field.groupby('geometry', grouping.geometry, target=shp_filename, keyname=shp_property)
+groupby = field.groupby('geometry', grouping.geometry, target=target, keyname=keyname)
 
 #print([(g[1].slices, g[1].weights.shape) for g in groupby.groups.items()])
 
 outds, outfield = field.apply(groupby, 'total')
 
-ncout = netCDF4Dataset(uri=sys.argv[3], dataset=outds)
+if len(sys.argv) > 2:
+	ncout = netCDF4Dataset(uri=sys.argv[-1], dataset=outds)
+else:
+	print('error, no output specified')
 
 
 

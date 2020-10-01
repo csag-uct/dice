@@ -113,30 +113,30 @@ def geometry(source, target=None, keyname=None, areas=False):
 		# If we fail then check if target is already a list
 		if isinstance(target, list):
 			collection = target
+			schema = collection.schema['properties']
 
 		# Finally resort to a global geometry target
 		elif target == None:
 
 			collection = [{
-				'geometry':asShape(Polygon([(-10,-90), (-10,90), (360, 90), (360,-90),(-10,-90)])),
+				'geometry':Polygon([(0,-90), (0,90), (360, 90), (360,-90),(0,-90)]),
 				'properties':{}
 			}]
+			schema = {}
 
 		target_crs = 'epsg:4326'
 
 
-
-	schema = collection.schema['properties']
-	properties = []
-
-
 	# Create projection transform to Mollweide equal area
-	source_tran = pyproj.Transformer.from_crs('epsg:4326','ESRI:53009')
-	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:53009')
+	source_tran = pyproj.Transformer.from_crs('epsg:4326','ESRI:53009', always_xy=True)
+	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:53009', always_xy=True)
 
+	# Transform source geometry
+	source_t = [transform(source_tran.transform, s) for s in source]
 	
 	# Create the intersects dictionary
 	intersects = OrderedDict()
+	properties = []
 
 
 	# First gather all source geometries into each feature
@@ -145,39 +145,32 @@ def geometry(source, target=None, keyname=None, areas=False):
 
 		geom = transform(target_tran.transform, shape(feature['geometry'])) # Transform to Mollweide
 
-		print(feature['properties'], keyname, geom)
+		print(feature['properties'], keyname)
 
-		#properties.append(feature['properties'])
+		properties.append(feature['properties'])
 
 		if keyname and keyname in feature['properties']:
 			key = feature['properties'][keyname]
 		else:
 			key = tid
 
-		print('processing feature', key)
+		print('processing feature', keyname, key)
 
 		# Initialise intersects for this target feature
 		intersects[key] = []
 
 		# Now we loop through all the source geomoetries
 		sid = 0
-		for s in source:
-
-			#print(s)
-			try:
-				st = transform(source_tran.transform, s) # Transform to Mollweide
-			except:
-				print("transform error", s, st)
+		for s in source_t:
 
 			try:
 				if s.intersects(geom):
 
 					# Calculate the intersection fraction
 					try:
-						intersection = st.intersection(geom).area/s.area
+						intersection = s.intersection(geom).area/s.area
 					except:
 						print("WARNING: error doing intersection, setting to zero..")
-						print(s, st)
 						print(geom.area, s.area)
 
 						intersection = 0.0
@@ -239,5 +232,6 @@ def geometry(source, target=None, keyname=None, areas=False):
 				properties=properties[list(intersects.keys()).index(key)],
 				schema=schema)
 
+	print(groups)
 
 	return groups
