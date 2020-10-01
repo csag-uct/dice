@@ -95,6 +95,10 @@ class CFField(Field):
 		# Search through all variables to try and find coordinate/ancil variables for this variable
 		for name, var in self.variable.dataset.variables.items():
 
+			# Ignore this self variable
+			if name == self.variable.name:
+				continue
+
 			# If we have units, check if they are coordinate units, if not coordinate_name will be None
 			if 'units' in var.attributes:
 				coordinate_name = self.units_match(var.attributes['units'])

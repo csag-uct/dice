@@ -406,6 +406,8 @@ class Field(object):
 
 		dataset = Dataset(dimensions=variable.dimensions, attributes=self.variable.dataset.attributes, variables=variables)
 
+		variable.dataset = dataset
+
 		result = self.__class__(variable)
 
 		return result
@@ -817,12 +819,9 @@ class Field(object):
 		variables = {self.variable.name: datavar}
 
 
-
-
 		# Now we create the coordinate variables which are just references to the existing coordinate
 		# variables except for the grouping coordinate which needs to be a new variable
 		for name, var in self.coordinate_variables.items():
-
 			if name == groupby.source:
 				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, var[1].name, attributes=var[1].attributes)
 
@@ -846,7 +845,6 @@ class Field(object):
 			for key, value in sample.properties.items():
 				dtype = np.dtype(sample.schema[key].split(':')[0])
 				variables[key] = Variable([dimensions[mapping[0]]], dtype, key)
-
 
 
 		# Now we actually iterate through the groups applying the function and writing results to the
@@ -903,5 +901,7 @@ class Field(object):
 		# Create a new dataset
 		dataset = Dataset(dimensions=dimensions, attributes=self.variable.dataset.attributes, variables=variables)
 
+		newfield = self.__class__(datavar)
+
 		# Return the dataset and a new field
-		return dataset, self.__class__(datavar)
+		return dataset, newfield

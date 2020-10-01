@@ -27,9 +27,9 @@ shp_filename, shp_property = sys.argv[2].split(':')
 c = collection(shp_filename)
 target = [shape(feature['geometry']) for feature in c]
 
-groupby = field.groupby('geometry', grouping.geometry, target=shp_filename)
+groupby = field.groupby('geometry', grouping.geometry, target=shp_filename, keyname=shp_property)
 
-print([(g[1].slices, g[1].weights.shape) for g in groupby.groups.items()])
+#print([(g[1].slices, g[1].weights.shape) for g in groupby.groups.items()])
 
 outds, outfield = field.apply(groupby, 'total')
 
