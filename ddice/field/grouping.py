@@ -119,7 +119,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 		elif target == None:
 
 			collection = [{
-				'geometry':Polygon([(0,-90), (0,90), (360, 90), (360,-90),(0,-90)]),
+				'geometry':Polygon([(-180.0,-90.0), (-180,90.0), (180.0, 90.0), (180.0,-90.0),(-180,-90.0)]),
 				'properties':{}
 			}]
 			schema = {}
@@ -162,7 +162,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 		# Now we loop through all the source geomoetries
 		sid = 0
 		for s in source_t:
-
+			
 			try:
 				if s.intersects(geom):
 
@@ -171,7 +171,8 @@ def geometry(source, target=None, keyname=None, areas=False):
 						intersection = s.intersection(geom).area/s.area
 					except:
 						print("WARNING: error doing intersection, setting to zero..")
-						print(geom.area, s.area)
+						print(geom)
+						print(s)
 
 						intersection = 0.0
 
