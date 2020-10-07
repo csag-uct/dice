@@ -490,6 +490,10 @@ class Field(object):
 			# Wrap to -180 to 180 longitude range
 			longitude_bounds[longitude_bounds > 180.0] -= 360
 
+			# Clip latitude to -90 to 90
+			latitude_bounds[latitude_bounds < -90] = -90
+			latitude_bounds[latitude_bounds > 90] = 90
+
 			for index in np.ndindex(result.shape):
 
 				coords = []
