@@ -171,9 +171,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 						intersection = s.intersection(geom).area/s.area
 					except:
 						print("WARNING: error doing intersection, setting to zero..")
-						print(geom)
-						print(s)
-
+						print("geom.area = {}, s.area = {}".format(geom.area, s.area))
 						intersection = 0.0
 
 					# Append the source id and intersection fraction
