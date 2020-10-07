@@ -629,7 +629,9 @@ class Field(object):
 		result = dict({"type":"FeatureCollection", "features":[]})
 
 		geometries = geometries.flatten()
-		data = data.flatten()
+		
+		if values:
+			data = data.flatten()
 
 		id = 0
 		for geometry in geometries:
@@ -650,7 +652,8 @@ class Field(object):
 				feature['properties']['area'] = float(areas[id])
 
 			# Add the data variable property
-			feature['properties'][self.variable.name] = float(data[id])
+			if values:
+				feature['properties'][self.variable.name] = float(data[id])
 
 			result['features'].append(feature)
 
