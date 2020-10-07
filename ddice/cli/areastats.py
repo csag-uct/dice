@@ -35,6 +35,10 @@ groupby = field.groupby('geometry', grouping.geometry, target=target, keyname=ke
 
 outds, outfield = field.apply(groupby, 'total')
 
+if target and keyname:
+	outds.attributes['features_src'] = str(target)
+	outds.attributes['features_key'] = str(keyname)
+
 if len(sys.argv) > 2:
 	ncout = netCDF4Dataset(uri=sys.argv[-1], dataset=outds)
 else:
