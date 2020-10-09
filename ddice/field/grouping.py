@@ -7,7 +7,7 @@ from datetime import datetime as dt
 
 import fiona
 import pyproj
-from shapely.geometry import shape, asShape, Polygon
+from shapely.geometry import shape, box, asShape, Polygon
 from shapely.validation import explain_validity
 from shapely.ops import transform
 
@@ -107,6 +107,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 	try:
 		collection = fiona.open(target)
 		target_crs = collection.crs
+		schema = collection.schema['properties']
 
 	except:
 
@@ -128,8 +129,8 @@ def geometry(source, target=None, keyname=None, areas=False):
 
 
 	# Create projection transform to Mollweide equal area
-	source_tran = pyproj.Transformer.from_crs('epsg:4326','ESRI:53009', always_xy=True)
-	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:53009', always_xy=True)
+	source_tran = pyproj.Transformer.from_crs('epsg:4326','ESRI:54016', always_xy=True)
+	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:54016', always_xy=True)
 
 	# Transform source geometry
 	source_t = [transform(source_tran.transform, s) for s in source]
@@ -163,19 +164,24 @@ def geometry(source, target=None, keyname=None, areas=False):
 		sid = 0
 		for s in source_t:
 			
+			bb = box(*geom.bounds)
 			try:
-				if s.intersects(geom):
+				# First check if we intersect the bounding box, this is fast...
+				if s.intersects(bb):
 
-					# Calculate the intersection fraction
-					try:
-						intersection = s.intersection(geom).area/s.area
-					except:
-						print("WARNING: error doing intersection, setting to zero..")
-						print("geom.area = {}, s.area = {}".format(geom.area, s.area))
-						intersection = 0.0
+					# Now check we intersect the actual geometry, this can be slow
+					if s.intersects(geom):
 
-					# Append the source id and intersection fraction
-					intersects[key].append((sid, intersection))
+						# Calculate the intersection fraction, this is the slowest part
+						try:
+							intersection = s.intersection(geom).area/s.area
+						except:
+							print("WARNING: error doing intersection, setting to zero..")
+							print("geom.area = {}, s.area = {}".format(geom.area, s.area))
+							intersection = 0.0
+
+						# Append the source id and intersection fraction
+						intersects[key].append((sid, intersection))
 
 			# Try and display some useful diags if intersects or intersection fails
 			# this usually relates to bad geometries
