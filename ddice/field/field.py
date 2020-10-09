@@ -491,8 +491,8 @@ class Field(object):
 			longitude_bounds[longitude_bounds > 180.0] -= 360
 
 			# Clip latitude to -90 to 90
-			latitude_bounds[latitude_bounds < -90] = -90
-			latitude_bounds[latitude_bounds > 90] = 90
+			latitude_bounds[latitude_bounds < -90] = -89.999
+			latitude_bounds[latitude_bounds > 90] = 89.999
 
 			for index in np.ndindex(result.shape):
 
@@ -645,7 +645,8 @@ class Field(object):
 
 			# Add ancilary variable properties
 			for name, var in self.ancil_variables.items():
-				feature['properties'][name] = var[1].ndarray().flatten()[id]
+				if len(var[1].shape) > 0:
+					feature['properties'][name] = var[1].ndarray().flatten()[id]
 
 			# Optionally add an area property
 			if add_areas:
