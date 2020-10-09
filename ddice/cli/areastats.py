@@ -11,20 +11,29 @@ from ddice.field import grouping
 from shapely.geometry import shape
 from fiona import collection
 
+import argparse
+
+parser = argparse.ArgumentParser(description='Calculate area statistics')
+parser.add_argument('source', help='filename:varname Source netcdf data filename and variable name to process')
+parser.add_argument('-g', '--geometry', type=str,
+                    help='shapefile:property The shapefile and the schema property name to use as the feature index variable')
+parser.add_argument('-o', '--output', type=str, required=True,
+                    help='Output filename')
+args = parser.parse_args()
+
+print(args)
 
 # Reading source data
-filename, varname = sys.argv[1].split(':')
-print('opening', filename, varname)
+filename, varname = args.source.split(':')
 
 ds = netCDF4Dataset(filename)
-print(ds)
 
 field = CFField(ds.variables[varname])
-print('field', field.shape)
+print('Reading {} from {}'.format(filename, varname))
 
-if len(sys.argv) > 3:
-	target, keyname = sys.argv[2].split(':')
-
+if args.geometry:
+	target, keyname = args.geometry.split(':')
+	print('Using geometry from {} and indexing with {}'.format(target, keyname))
 else:
 	target = None
 	keyname = None
@@ -39,10 +48,9 @@ if target and keyname:
 	outds.attributes['features_src'] = str(target)
 	outds.attributes['features_key'] = str(keyname)
 
-if len(sys.argv) > 2:
-	ncout = netCDF4Dataset(uri=sys.argv[-1], dataset=outds)
-else:
-	print('error, no output specified')
+print('Writing to {}'.format(args.output))
+
+ncout = netCDF4Dataset(uri=args.output, dataset=outds)
 
 
 
