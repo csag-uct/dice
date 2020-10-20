@@ -295,6 +295,11 @@ class netCDF4Dataset(Dataset):
 					# Create a netCDF4Array instance using the netcdf4 variable and use this as the tile data
 					tiledata = netCDF4Array(thisvar)
 
+					# If this is the time dimension then we might need to adjust the time values
+					# to align with the time units of the first file
+					if len(dims) == 1 and dims[0].name == aggdim:
+						print('got time variable', thisvar)
+
 					# Construct the tile and add it to the tiles dict
 					tiles[index] = {'bounds': bounds, 'data':tiledata}
 
