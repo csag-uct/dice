@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import glob
 
-from ddice.array import Array, tiledArray
+from ddice.array import Array, tiledArray, numpyArray
 from ddice.array import reslice
 from ddice.variable import Dimension, Variable
 
@@ -298,7 +298,19 @@ class netCDF4Dataset(Dataset):
 					# If this is the time dimension then we might need to adjust the time values
 					# to align with the time units of the first file
 					if len(dims) == 1 and dims[0].name == aggdim:
-						print('got time variable', thisvar)
+
+						if thisvar.units != var.attributes['units']:
+
+							tiledata = numpyArray(thisvar.shape, thisvar.dtype)
+
+							if 'calendar' in thisvar.ncattrs():
+								dates = netCDF4.num2date(thisvar[:], thisvar.units, calendar=thisvar.calendar)
+
+							if 'calendar' in var.attributes:
+								tiledata[:] = netCDF4.date2num(dates, var.attributes['units'], calendar=var.attributes['calendar'])
+							else:
+								tiledata[:] = netCDF4.date2num(dates, var.attributes['units'])
+
 
 					# Construct the tile and add it to the tiles dict
 					tiles[index] = {'bounds': bounds, 'data':tiledata}
