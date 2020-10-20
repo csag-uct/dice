@@ -54,7 +54,9 @@ def variable(shortname, varname):
 	ds = netCDF4Dataset(properties['path'])
 	variable = ds.variables[varname]
 
-	return Response(json.dumps(variable.asjson(), cls=numpyEncoder), mimetype='application/json')
+	field = CFField(variable)
+
+	return Response(json.dumps(field.variable.asjson(), cls=numpyEncoder), mimetype='application/json')
 
 @app.route('/dataset/<shortname>/features')
 def features(shortname):
