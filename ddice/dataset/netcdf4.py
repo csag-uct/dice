@@ -297,7 +297,7 @@ class netCDF4Dataset(Dataset):
 
 					# If this is the time dimension then we might need to adjust the time values
 					# to align with the time units of the first file
-					if len(dims) == 1 and dims[0].name == aggdim:
+					if len(dims) == 1 and dims[0].name == aggdim and thisvar.long_name == 'time':
 
 						if thisvar.units != var.attributes['units']:
 
