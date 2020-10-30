@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+
+import sys
+
+from ddice.dataset.netcdf4 import netCDF4Dataset
+
+infile = sys.argv[1:-1]
+outfile = sys.argv[-1]
+
+ds = netCDF4Dataset(infile)
+
+outds = netCDF4Dataset(outfile, ds)
+
+
+
