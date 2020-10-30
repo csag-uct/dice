@@ -82,7 +82,7 @@ class Dataset(object):
 					# Otherwise we need to check if the sizes match, if not we throw an exception, if yes, we carry on
 					else:
 						if dimension.size != self._dimensions[mynames.index(dimension.name)].size:
-							raise Exception('Cannot add variable {} with dimension {} when dimension {} already exists in dataset'.format(var, dimension, self._dimensions[gotitalready]))
+							print('WARNING: Cannot add variable {} with dimension {} when dimension {} with different size already exists in dataset'.format(var, dimension, self._dimensions[mynames.index(dimension.name)]))
 
 				# Set the variables dataset attribute
 				var.dataset = self
