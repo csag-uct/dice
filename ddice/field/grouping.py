@@ -129,8 +129,10 @@ def geometry(source, target=None, keyname=None, areas=False):
 
 
 	# Create projection transform to Mollweide equal area
-	source_tran = pyproj.Transformer.from_crs('epsg:4326','ESRI:54016', always_xy=True)
-	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:54016', always_xy=True)
+	source_tran = pyproj.Transformer.from_crs('epsg:4326','ESRI:54034', always_xy=True)
+	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:54034', always_xy=True)
+	#source_tran = pyproj.Transformer.from_crs('epsg:4326','epsg:4326', always_xy=True)
+	#target_tran = pyproj.Transformer.from_crs(target_crs,'epsg:4326', always_xy=True)
 
 	# Transform source geometry
 	source_t = [transform(source_tran.transform, s) for s in source]
@@ -163,8 +165,9 @@ def geometry(source, target=None, keyname=None, areas=False):
 		# Now we loop through all the source geomoetries
 		sid = 0
 		for s in source_t:
-			
+
 			bb = box(*geom.bounds)
+
 			try:
 				# First check if we intersect the bounding box, this is fast...
 				if s.intersects(bb):
@@ -174,7 +177,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 
 						# Calculate the intersection fraction, this is the slowest part
 						try:
-							intersection = s.intersection(geom).area/s.area
+							intersection = s.intersection(geom).area/geom.area
 						except:
 							print("WARNING: error doing intersection, setting to zero..")
 							print("geom.area = {}, s.area = {}".format(geom.area, s.area))
