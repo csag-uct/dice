@@ -103,6 +103,13 @@ class CFField(Field):
 			if 'units' in var.attributes:
 				coordinate_name = self.units_match(var.attributes['units'])
 
+				# Sometimes there are multiple potential time coordinate variables, only keep the one
+				# with long_name == time
+				if coordinate_name == 'time':
+					if 'long_name' in var.attributes:
+						if var.attributes['long_name'] != 'time':
+							coordinate_name = name
+
 			else:
 				coordinate_name = None
 
