@@ -103,29 +103,33 @@ def geometry(source, target=None, keyname=None, areas=False):
 	original_shape = source.shape
 	source = source.flatten()
 
-	# Try and open the shapefile
-	try:
-		collection = fiona.open(target)
-		target_crs = collection.crs
-		schema = collection.schema['properties']
+	# If target is None then we construct a global target
+	if target == None:
+		collection = [{
+			'geometry':Polygon([(-180.0,-90.0), (-180,90.0), (180.0, 90.0), (180.0,-90.0),(-180,-90.0)]),
+			'properties':{}
+		}]
+		schema = {}
+		target_crs = 'epsg:4326'
 
-	except:
+	# If target is a string, try to open it as a shapefile
+	elif isinstance(target, str):
 
-		# If we fail then check if target is already a list
-		if isinstance(target, list):
-			collection = target
+		# Otherwise Try and open the shapefile
+		try:
+			collection = fiona.open(target)
+			target_crs = collection.crs
 			schema = collection.schema['properties']
 
-		# Finally resort to a global geometry target
-		elif target == None:
+		except:
+			print("ERROR: Cannot open shapefile {}".format(target))
+			return None
 
-			collection = [{
-				'geometry':Polygon([(-180.0,-90.0), (-180,90.0), (180.0, 90.0), (180.0,-90.0),(-180,-90.0)]),
-				'properties':{}
-			}]
-			schema = {}
-
-		target_crs = 'epsg:4326'
+	# If we fail then check if target is already a list
+	elif len(target):
+		collection = target
+		schema = collection.schema['properties']
+		target_crs = collection.crs
 
 
 	# Create projection transform to Mollweide equal area
