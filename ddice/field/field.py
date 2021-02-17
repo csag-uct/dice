@@ -60,7 +60,8 @@ class Field(object):
 		self.coordinate_variables = {}
 		self.ancil_variables = {}
 
-		# Geometries, areas and features are lazy computed and cached here
+		# Times, Geometries, areas and features are lazy computed and cached here
+		self._times = False
 		self._geometries = False
 		self._features = False
 		self._areas = False
@@ -151,7 +152,10 @@ class Field(object):
 
 	@property
 	def times(self):
-		return self.coordinate('time').ndarray()
+		if not self._times:
+			self._times = self.coordinate('time').ndarray()
+
+		return self._times
 
 
 	@property
@@ -851,6 +855,7 @@ class Field(object):
 		if sample.properties and sample.schema:
 
 			for key, value in sample.properties.items():
+				print(key, value)
 				dtype = np.dtype(sample.schema[key].split(':')[0])
 				variables[key] = Variable([dimensions[mapping[0]]], dtype, key)
 
