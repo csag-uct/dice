@@ -698,7 +698,6 @@ class Field(object):
 		>>> #groups = f.groupby('geometry', grouping.geometry, target=target)
 
 		"""
-
 		# Find the coordinate mapping for the request coordinate, if it exists
 		if coordinate in self.coordinate_variables:
 			mapping, coordinate_variable = self.coordinate_variables[coordinate]
@@ -722,6 +721,7 @@ class Field(object):
 			else:
 				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
 
+			print('field.groupby: constructing source geometry')
 			coordinate_values = self.geometries()
 
 

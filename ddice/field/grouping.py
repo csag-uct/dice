@@ -137,6 +137,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:54034', always_xy=True)
 
 	# Transform source geometry
+	print('grouping.geometry: re-projecting source geometry')
 	source_t = [transform(source_tran.transform, s) for s in source]
 	
 	# Create the intersects dictionary
@@ -149,6 +150,7 @@ def geometry(source, target=None, keyname=None, areas=False):
 	for feature in collection:
 
 		geom = transform(target_tran.transform, shape(feature['geometry'])) # Transform to Mollweide
+		bb = box(*geom.bounds)
 
 		print(feature['properties'], keyname)
 
@@ -164,18 +166,16 @@ def geometry(source, target=None, keyname=None, areas=False):
 		# Initialise intersects for this target feature
 		intersects[key] = []
 
-		# Now we loop through all the source geomoetries
+		# Now we loop through all the source geometries
 		sid = 0
 		for s in source_t:
-
-			bb = box(*geom.bounds)
 
 			try:
 				# First check if we intersect the bounding box, this is fast...
 				if s.intersects(bb):
 
 					# Now check we intersect the actual geometry, this can be slow
-					if s.intersects(geom):
+#					if s.intersects(geom):
 
 						# Calculate the intersection fraction, this is the slowest part
 						try:
