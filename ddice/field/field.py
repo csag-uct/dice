@@ -891,7 +891,9 @@ class Field(object):
 			thisshape = datavar[slices].shape
 
 			# Apply the function to the subset with weights and reshape to the required shape
-			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
+			src_vals = np.ma.masked_invalid(self.variable[subset].ndarray())
+#			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
+			datavar[slices] = func(src_vals * weights, axis=axis).reshape(thisshape)
 
 			# Assign the new coordinate variable value which is the group key
 			# Deal with time correctly
