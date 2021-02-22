@@ -125,6 +125,8 @@ def geometry(source, target=None, keyname=None, areas=False):
 			print("ERROR: Cannot open shapefile {}".format(target))
 			return None
 
+		print("Target CRS is ", target_crs)
+
 	# If we fail then check if target is already a list
 	elif len(target):
 		collection = target
@@ -135,6 +137,8 @@ def geometry(source, target=None, keyname=None, areas=False):
 	# Create projection transform to Mollweide equal area
 	source_tran = pyproj.Transformer.from_crs('epsg:4326','ESRI:54034', always_xy=True)
 	target_tran = pyproj.Transformer.from_crs(target_crs,'ESRI:54034', always_xy=True)
+#	source_tran = pyproj.Transformer.from_crs('epsg:4326','epsg:4326', always_xy=True)
+#	target_tran = pyproj.Transformer.from_crs(target_crs,'epsg:4326', always_xy=True)
 
 	# Transform source geometry
 	print('grouping.geometry: re-projecting source geometry')
