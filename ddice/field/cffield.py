@@ -162,11 +162,12 @@ class CFField(Field):
 			if 'calendar' in self.coordinate('time').attributes:
 				return netCDF4.num2date(self.coordinate('time').ndarray(),
 					                    self.coordinate('time').attributes['units'],
-					                    self.coordinate('time').attributes['calendar'])
-
+					                    self.coordinate('time').attributes['calendar'], 
+										only_use_cftime_datetimes=False)
 			else:
 				return netCDF4.num2date(self.coordinate('time').ndarray(),
-					                    self.coordinate('time').attributes['units'])
+					                    self.coordinate('time').attributes['units'],
+										only_use_cftime_datetimes=False)
 
 		else:
 			return None
