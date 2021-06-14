@@ -177,16 +177,24 @@ def geometry(source, target=None, keyname=None, areas=False):
 					# Now check we intersect the actual geometry, this can be slow
 					if s.intersects(geom):
 
-						# Calculate the intersection fraction, this is the slowest part
-						try:
-							intersection = s.intersection(geom).area/geom.area
-						except:
-							print("WARNING: error doing intersection, setting to zero..")
-							print("geom.area = {}, s.area = {}".format(geom.area, s.area))
-							intersection = 0.0
+						# If source has area then we can calculate the overlap
+						if s.area > 0.0:
+
+							# Calculate the intersection fraction, this is the slowest part
+							try:
+								intersection = s.intersection(geom).area/geom.area
+							except:
+								print("WARNING: error doing intersection, setting to zero..")
+								print("geom.area = {}, s.area = {}".format(geom.area, s.area))
+								intersection = 0.0
+						
+						# if geom has zero area then its a point and intersection is 1
+						else:
+							intersection = 1.0
 
 						# Append the source id and intersection fraction
 						intersects[key].append((sid, intersection))
+						
 
 			# Try and display some useful diags if intersects or intersection fails
 			# this usually relates to bad geometries
