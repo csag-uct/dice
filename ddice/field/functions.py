@@ -32,8 +32,15 @@ def generic(func, values, axis=0, above=None, below=None):
 	return func(values, axis=axis)
 
 
+# np.ma.sum sets masked values to 0 which isn't what we want, calculate the mean and multiple by the number elements
 def total(values, **kwargs):
-	return generic(np.ma.sum, values, **kwargs)
+
+	if 'axis' in kwargs:
+		axis = kwargs['axis']
+	else:
+		axis = 0
+
+	return generic(np.ma.mean, values, **kwargs) * np.ma.count(values, axis=axis)
 
 # np.ma.mean doesn't support tuples for axis so we convert to non masked array first
 def mean(values, **kwargs):
