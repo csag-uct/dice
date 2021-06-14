@@ -698,7 +698,6 @@ class Field(object):
 		>>> #groups = f.groupby('geometry', grouping.geometry, target=target)
 
 		"""
-
 		# Find the coordinate mapping for the request coordinate, if it exists
 		if coordinate in self.coordinate_variables:
 			mapping, coordinate_variable = self.coordinate_variables[coordinate]
@@ -722,6 +721,7 @@ class Field(object):
 			else:
 				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
 
+			print('field.groupby: constructing source geometry')
 			coordinate_values = self.geometries()
 
 
@@ -891,7 +891,9 @@ class Field(object):
 			thisshape = datavar[slices].shape
 
 			# Apply the function to the subset with weights and reshape to the required shape
-			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
+			src_vals = np.ma.masked_invalid(self.variable[subset].ndarray())
+#			datavar[slices] = func(self.variable[subset].ndarray() * weights, axis=axis).reshape(thisshape)
+			datavar[slices] = func(src_vals * weights, axis=axis).reshape(thisshape)
 
 			# Assign the new coordinate variable value which is the group key
 			# Deal with time correctly

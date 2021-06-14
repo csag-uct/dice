@@ -21,7 +21,7 @@ parser.add_argument('-o', '--output', type=str, required=True,
                     help='Output filename')
 args = parser.parse_args()
 
-print(args)
+#print(args)
 
 # Reading source data
 filename, varname = args.source.split(':')
@@ -38,21 +38,22 @@ else:
 	target = None
 	keyname = None
 
+print('Creating geometry groups... ')
 groupby = field.groupby('geometry', grouping.geometry, target=target, keyname=keyname)
+print('done')
 
 #print([(g[1].slices, g[1].weights.shape) for g in groupby.groups.items()])
 
+print('Applying groups to field... ')
 outds, outfield = field.apply(groupby, 'total')
+print('done')
 
 if target and keyname:
 	outds.attributes['features_src'] = str(target)
 	outds.attributes['features_key'] = str(keyname)
 
-print('Writing to {}'.format(args.output))
-
+print('Writing to {}...'.format(args.output))
 ncout = netCDF4Dataset(uri=args.output, dataset=outds)
-
-
-
+print('done')
 
 
