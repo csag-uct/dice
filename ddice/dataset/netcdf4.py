@@ -1,3 +1,4 @@
+from textwrap import fill
 import netCDF4
 import numpy as np
 import sys
@@ -130,7 +131,13 @@ class netCDF4Dataset(Dataset):
 			for name, var in dataset.variables.items():
 				dims = tuple([d.name for d in var.dimensions])
 				
-				ncvar = self._ds.createVariable(name, var.dtype, dims)
+				# Have to set fill value at creation, can't just set the attribute
+				if '_FillValue' in var.attributes:
+					fill_value = var.attributes['_FillValue']
+				else:
+					fill_value = False
+
+				ncvar = self._ds.createVariable(name, var.dtype, dims, fill_value=fill_value)
 
 				# Write variable attributes
 				for key, value in var.attributes.items():
@@ -297,7 +304,7 @@ class netCDF4Dataset(Dataset):
 
 					# If this is the time dimension then we might need to adjust the time values
 					# to align with the time units of the first file
-					if len(dims) == 1 and dims[0].name == aggdim and thisvar.long_name == 'time':
+					if len(dims) == 1 and dims[0].name == aggdim and thisvar.standard_name == 'time':
 
 						if thisvar.units != var.attributes['units']:
 
