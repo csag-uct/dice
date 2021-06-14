@@ -470,7 +470,7 @@ class Field(object):
 				locations = zip(list(longitudes), list(latitudes))
 
 
-			result[:] = map(lambda loc: Point(*loc), locations)
+			result[:] = list(map(lambda loc: Point(*loc), locations))
 
 
 		# Rectangular grid
@@ -899,7 +899,10 @@ class Field(object):
 				key = netCDF4.date2num(key, variables[groupby.source].attributes['units'])
 
 			#print(variables)
-			#variables[groupby.source][i] = key
+			try:
+				variables[groupby.source][i] = key
+			except:
+				pass
 
 			# Assign property ancilary var
 			for key, value in group.properties.items():
