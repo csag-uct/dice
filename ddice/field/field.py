@@ -798,7 +798,7 @@ class Field(object):
 			if self.coordinate_variables['latitude'][0] == self.coordinate_variables['longitude'][0]:
 				mapping = self.coordinate_variables['latitude'][0]
 
-			# otherwise, combing latude and longitude dimension maps
+			# otherwise, combine latitude and longitude dimension maps
 			else:
 				mapping = self.coordinate_variables['latitude'][0] + self.coordinate_variables['longitude'][0]
 
@@ -824,8 +824,6 @@ class Field(object):
 
 		slices = [slice(None)]*len(dimensions)
 
-
-
 		# Create the new data variable using numpy storage for now
 		datavar = Variable(dimensions, self.variable.dtype, name=self.variable.name, attributes=self.variable.attributes, storage=numpyArray)
 		variables = {self.variable.name: datavar}
@@ -834,9 +832,11 @@ class Field(object):
 		# Now we create the coordinate variables which are just references to the existing coordinate
 		# variables except for the grouping coordinate which needs to be a new variable
 		for name, var in self.coordinate_variables.items():
+
+			print('making coordinate variables', name, var)
+
 			if name == groupby.source:
 				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, var[1].name, attributes=var[1].attributes)
-
 			else:
 				if not set(var[0]).issubset(mapping):
 					variables[var[1].name] = var[1]
@@ -855,7 +855,6 @@ class Field(object):
 		if sample.properties and sample.schema:
 
 			for key, value in sample.properties.items():
-				print(key, value)
 				dtype = np.dtype(sample.schema[key].split(':')[0])
 				variables[key] = Variable([dimensions[mapping[0]]], dtype, key)
 
