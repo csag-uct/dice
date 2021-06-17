@@ -156,7 +156,6 @@ def geometry(source, target=None, keyname=None, areas=False):
 		geom = transform(target_tran.transform, shape(feature['geometry'])) # Transform to Mollweide
 		bb = box(*geom.bounds)
 
-		print(feature['properties'], keyname)
 
 		properties.append(feature['properties'])
 
