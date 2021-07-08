@@ -833,7 +833,7 @@ class Field(object):
 		# variables except for the grouping coordinate which needs to be a new variable
 		for name, var in self.coordinate_variables.items():
 
-			print('making coordinate variables', name, var)
+#			print('making coordinate variables', name, var)
 
 			if name == groupby.source:
 				variables[var[1].name] = Variable([dimensions[mapping[0]]], var[1].dtype, var[1].name, attributes=var[1].attributes)
@@ -897,7 +897,10 @@ class Field(object):
 			# Assign the new coordinate variable value which is the group key
 			# Deal with time correctly
 			if groupby.source == 'time':
-				key = netCDF4.date2num(key, variables[groupby.source].attributes['units'])
+				try:
+					key = netCDF4.date2num(key, variables[groupby.source].attributes['units'])
+				except:
+					pass
 
 			#print(variables)
 			try:
